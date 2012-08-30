@@ -1,0 +1,64 @@
+#!/usr/bin/python
+
+
+import setns
+import os
+
+from optparse import OptionParser
+
+parser = OptionParser()
+parser.add_option("-n", "--net",
+                  action="store_true", dest="netns", default=False,
+                  help="Enter network namespace")
+parser.add_option("-m", "--mnt",
+                  action="store_true", dest="mntns", default=False,
+                  help="Enter mount namespace")
+
+(options, args) = parser.parse_args()
+
+try:
+	slice_name = args[0]
+except IndexError:
+	print "You must specify a vm name"
+	exit(1)
+
+
+try:
+	cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
+	output = os.popen(cmd).readlines()
+except:
+	print "Error finding slice %s"%slice_name
+	exit(1)
+
+slice_spec = None
+for e in output:
+	try:
+		l = e.rstrip()
+		path = l.split(':')[0]	
+		comp = l.rsplit(':')[-1]
+		slice_name_check = comp.rsplit('/')[-1]
+
+		if (slice_name_check == slice_name):
+			slice_path = path
+			pid = slice_path.split('/')[2]
+			cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
+			if (cmdline == '/sbin/init'):
+				slice_spec = slice_path
+				break
+	except:
+		break
+
+if (not slice_spec):
+	print "Could not find any processes associated with %s"%slice_name
+
+
+#os.closerange(0,1024)
+
+r1 = setns.chcontext('/proc/%s/ns/utc'%pid)
+r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
+path = '/proc/%s/ns/net'%pid
+r3 = setns.chcontext(path)
+os.system('whoami')
+open('/proc/lxcsu','w').write(pid)
+os.system('mount none -t proc /proc')
+os.execv('/bin/sh',['/bin/sh'])
