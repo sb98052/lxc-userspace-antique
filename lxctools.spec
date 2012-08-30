@@ -41,10 +41,11 @@ Userspace tools for switching between lxc containers.
 make 
 
 %install
+mkdir -p $RPM_BUILD_ROOT/usr/sbin
+install -D -m 755 vsh $RPM_BUILD_ROOT/usr/sbin/vsh
+install -D -m 755 lxcsu $RPM_BUILD_ROOT/usr/sbin/lxcsu
+chmod u+s $RPM_BUILD_ROOT/usr/sbin/lxcsu
 cp build/lib*/setns.so $RPM_BUILD_ROOT/usr/sbin
-install -D -m 755 $RPM_BUILD_ROOT/vsh /usr/sbin/vsh
-install -D -m 755 $RPM_BUILD_ROOT/lxcsu /usr/sbin/lxcsu
-chmod u+s $RPM_BUILD_ROOT/lxcsu/usr/sbin/vsh
 
 %clean
 rm -rf $RPM_BUILD_ROOT
