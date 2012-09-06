@@ -6,6 +6,8 @@ import os
 
 from optparse import OptionParser
 
+drop_capabilities='cap_sys_admin,cap_net_admin,cap_sys_boot,cap_sys_module'
+
 parser = OptionParser()
 parser.add_option("-n", "--net",
                   action="store_true", dest="netns", default=False,
@@ -13,6 +15,9 @@ parser.add_option("-n", "--net",
 parser.add_option("-m", "--mnt",
                   action="store_true", dest="mntns", default=False,
                   help="Enter mount namespace")
+parser.add_option("-p", "--pid",
+                  action="store_true", dest="pidns", default=False,
+                  help="Enter pid namespace")
 
 (options, args) = parser.parse_args()
 
@@ -21,7 +26,6 @@ try:
 except IndexError:
 	print "You must specify a vm name"
 	exit(1)
-
 
 try:
 	cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
@@ -48,17 +52,14 @@ for e in output:
 	except:
 		break
 
-if (not slice_spec):
-	print "Could not find any processes associated with %s"%slice_name
-
-
-#os.closerange(0,1024)
+if (not slice_spec or not pid):
+    print "Not started: %s"%slice_name
+    exit(1)
 
 r1 = setns.chcontext('/proc/%s/ns/utc'%pid)
 r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
 path = '/proc/%s/ns/net'%pid
 r3 = setns.chcontext(path)
-os.system('whoami')
 open('/proc/lxcsu','w').write(pid)
-os.system('mount none -t proc /proc')
-os.execv('/bin/sh',['/bin/sh'])
+#os.system('mount none -t proc /proc')
+os.execv('/usr/sbin/capsh',['--drop',drop_capabilities,'--'])

@@ -52,7 +52,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 /usr/sbin
-/lib
+
+%post
+chmod u+s /usr/sbin/vsh
 
 %postun
 
