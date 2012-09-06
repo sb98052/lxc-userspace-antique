@@ -6,7 +6,7 @@ import os
 
 from optparse import OptionParser
 
-drop_capabilities='cap_sys_admin,cap_net_admin,cap_sys_boot,cap_sys_module'
+drop_capabilities='cap_sys_admin,cap_net_admin,cap_sys_boot,cap_sys_module'.split(',')
 
 parser = OptionParser()
 parser.add_option("-n", "--net",
@@ -63,4 +63,12 @@ r3 = setns.chcontext(path)
 
 open('/proc/lxcsu','w').write(pid)
 open('/proc/pidsu','w').write(pid)
-os.execv('/usr/sbin/capsh',['--drop',drop_capabilities,'--'])
+
+pid = os.fork()
+
+cap_args = map(lambda c:'--drop='+c, drop_capabilities)
+    
+if (pid == 0):
+    os.execv('/usr/sbin/capsh',cap_args+['--'])
+else:
+    os.waitpid(pid,0)
