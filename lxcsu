@@ -60,6 +60,7 @@ r1 = setns.chcontext('/proc/%s/ns/utc'%pid)
 r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
 path = '/proc/%s/ns/net'%pid
 r3 = setns.chcontext(path)
+
 open('/proc/lxcsu','w').write(pid)
-#os.system('mount none -t proc /proc')
+open('/proc/pidsu','w').write(pid)
 os.execv('/usr/sbin/capsh',['--drop',drop_capabilities,'--'])
