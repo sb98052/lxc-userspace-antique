@@ -3,11 +3,13 @@
 
 import setns
 import os
+import sys
 
-from optparse import OptionParser
+#from optparse import OptionParser
 
 drop_capabilities='cap_sys_admin,cap_net_admin,cap_sys_boot,cap_sys_module'.split(',')
 
+"""
 parser = OptionParser()
 parser.add_option("-n", "--net",
                   action="store_true", dest="netns", default=False,
@@ -20,6 +22,8 @@ parser.add_option("-p", "--pid",
                   help="Enter pid namespace")
 
 (options, args) = parser.parse_args()
+"""
+args = sys.argv[1:]
 
 try:
 	slice_name = args[0]
@@ -69,6 +73,6 @@ pid = os.fork()
 cap_args = map(lambda c:'--drop='+c, drop_capabilities)
     
 if (pid == 0):
-    os.execv('/usr/sbin/capsh',cap_args+['--'])
+    os.execv('/usr/sbin/capsh',cap_args+['--']+args[1:])
 else:
     os.waitpid(pid,0)

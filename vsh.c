@@ -45,7 +45,7 @@ char **extend_argv(int argc, char **argv, int num_extra_args) {
     return argv2;
 }
 
-#define NUM_LXCSU_EXEC_ARGS 3
+#define NUM_LXCSU_EXEC_ARGS 1
 
 int main(int argc, char **argv, char **envp)
 {
@@ -69,9 +69,7 @@ int main(int argc, char **argv, char **envp)
     // Populate arguments
     snprintf(slice_id_str, 255, "%u", slice_xid);
     argv2[0] = strdup(LXCSU_PATH);
-    argv2[1] = strdup("-n");
-    argv2[2] = strdup("-m");
-    argv2[3] = strdup(slice_name);
+    argv2[1] = strdup(slice_name);
 
     if (setuid(geteuid())) goto out_exception;
 
