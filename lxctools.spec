@@ -1,5 +1,5 @@
 %define name lxctools
-%define version 0.4
+%define version 0.5
 %define taglevel 1
 
 %define percent %
