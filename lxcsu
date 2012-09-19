@@ -7,7 +7,7 @@ import sys
 
 #from optparse import OptionParser
 
-drop_capabilities='cap_sys_admin,cap_net_admin,cap_sys_boot,cap_sys_module'.split(',')
+drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'.split(',')
 
 """
 parser = OptionParser()
