@@ -1,6 +1,6 @@
 %define name lxctools
 %define version 0.5
-%define taglevel 1
+%define taglevel 1.1.openvswitch
 
 %define percent %
 %define braop \{
