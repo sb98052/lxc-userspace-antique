@@ -62,7 +62,7 @@ if (not slice_spec or not pid):
 
 # Enter cgroups
 try:
-    for subsystem in ['cpuset','memory','fs','blkio']:
+    for subsystem in ['cpuset','memory','blkio']:
         open('/sys/fs/cgroup/%s/libvirt/tasks'%subsystem,'w').write(pid)
 except:
     print "Error assigning resources: %s"%slice_name
