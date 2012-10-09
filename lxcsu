@@ -60,6 +60,14 @@ if (not slice_spec or not pid):
     print "Not started: %s"%slice_name
     exit(1)
 
+# Enter cgroups
+try:
+    for subsystem in ['cpuset','memory','fs','blkio']:
+        open('/sys/fs/cgroup/%s/libvirt/tasks'%subsystem,'w').write(pid)
+except:
+    print "Error assigning resources: %s"%slice_name
+    exit(1)
+
 r1 = setns.chcontext('/proc/%s/ns/utc'%pid)
 r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
 path = '/proc/%s/ns/net'%pid
@@ -67,6 +75,8 @@ r3 = setns.chcontext(path)
 
 open('/proc/lxcsu','w').write(pid)
 open('/proc/pidsu','w').write(pid)
+
+
 
 pid = os.fork()
 
