@@ -83,21 +83,21 @@ except:
     print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
     exit(1)
 
-r1 = setns.chcontext('/proc/%s/ns/utc'%pid)
+r1 = setns.chcontext('/proc/%s/ns/uts'%pid)
+
+print pid
+
 r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
-path = '/proc/%s/ns/net'%pid
-r3 = setns.chcontext(path)
+r3 = setns.chcontext('/proc/%s/ns/net'%pid)
 
 open('/proc/lxcsu','w').write(pid)
 open('/proc/pidsu','w').write(pid)
-
-
 
 pid = os.fork()
 
 cap_args = map(lambda c:'--drop='+c, drop_capabilities)
     
 if (pid == 0):
-    os.execv('/usr/sbin/capsh',cap_args+['--']+args[1:])
+    os.execv('/usr/sbin/capsh',cap_args+['--','--login']+args[1:])
 else:
     os.waitpid(pid,0)
