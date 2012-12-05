@@ -85,8 +85,6 @@ except:
 
 r1 = setns.chcontext('/proc/%s/ns/uts'%pid)
 
-print pid
-
 r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
 r3 = setns.chcontext('/proc/%s/ns/net'%pid)
 
