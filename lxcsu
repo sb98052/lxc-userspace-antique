@@ -84,7 +84,6 @@ except:
     exit(1)
 
 r1 = setns.chcontext('/proc/%s/ns/uts'%pid)
-
 r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
 r3 = setns.chcontext('/proc/%s/ns/net'%pid)
 
@@ -97,5 +96,6 @@ cap_args = map(lambda c:'--drop='+c, drop_capabilities)
     
 if (pid == 0):
     os.execv('/usr/sbin/capsh',cap_args+['--','--login']+args[1:])
+    os.environ['SHELL'] = '/bin/sh'
 else:
     os.waitpid(pid,0)
