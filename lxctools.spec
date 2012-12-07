@@ -1,26 +1,18 @@
 %define name lxctools
-%define version 0.901
+%define version 0.902
 %define taglevel 2
 
 %define percent %
 %define braop \{
 %define bracl \}
-%define kernel_version %( rpm -q --qf %{percent}%{braop}version%{bracl} kernel-headers )
-%define kernel_release %( rpm -q --qf %{percent}%{braop}release%{bracl} kernel-headers )
-%define kernel_arch %( rpm -q --qf %{percent}%{braop}arch%{bracl} kernel-headers )
 
 # this is getting really a lot of stuff, could be made simpler probably
-%define release %{kernel_version}.%{kernel_release}.%{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
-
-%define kernel_id %{kernel_version}-%{kernel_release}.%{kernel_arch}
-%define kernelpath /usr/src/kernels/%{kernel_id}
-
+%define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
 
 Vendor: PlanetLab
 Packager: PlanetLab Central <support@planet-lab.org>
 Distribution: PlanetLab %{plrelease}
 URL: %{SCMURL}
-Requires: kernel = %{kernel_version}-%{kernel_release}
 
 Summary: Userspace tools for switching between lxc containers
 Name: %{name}
