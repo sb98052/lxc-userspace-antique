@@ -69,6 +69,12 @@ except:
     print "Error assigning resources: %s"%slice_name
     exit(1)
 
+try:
+    open('/sys/fs/cgroup/cpuacct/system/libvirtd.service/libvirt/lxc/%s/tasks'%slice_name,'w').write(str(os.getpid()))
+except:
+    print "Error assigning cpuacct: %s" % slice_name
+    exit(1)
+
 # If the slice is frozen, then we'll get an EBUSY when trying to write to the task
 # list for the freezer cgroup. Since the user couldn't do anything anyway, it's best
 # in this case to error out the shell. (an alternative would be to un-freeze it,
@@ -95,7 +101,7 @@ pid = os.fork()
 cap_args = map(lambda c:'--drop='+c, drop_capabilities)
     
 if (pid == 0):
-    os.execv('/usr/sbin/capsh',cap_args+['--','--login']+args[1:])
     os.environ['SHELL'] = '/bin/sh'
+    os.execv('/usr/sbin/capsh',cap_args+['--','--login']+args[1:])
 else:
     os.waitpid(pid,0)
