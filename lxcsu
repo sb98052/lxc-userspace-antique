@@ -7,7 +7,7 @@ import sys
 
 #from optparse import OptionParser
 
-drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'.split(',')
+drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
 
 def umount(fs_dir):
     output = os.popen('/bin/umount %s 2>&1'%fs_dir).read()
@@ -117,10 +117,11 @@ if (not umount('/sys/fs/cgroup')):
 
 pid = os.fork()
 
-cap_args = map(lambda c:'--drop='+c, drop_capabilities)
-    
 if (pid == 0):
+    cap_arg = '--drop='+drop_capabilities
+    exec_args = ['/usr/sbin/capsh',cap_arg,'--','--login']+args[1:]
+
     os.environ['SHELL'] = '/bin/sh'
-    os.execv('/usr/sbin/capsh',cap_args+['--','--login']+args[1:])
+    os.execv('/usr/sbin/capsh',exec_args)
 else:
     os.waitpid(pid,0)
