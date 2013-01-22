@@ -9,6 +9,11 @@ import sys
 
 drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'.split(',')
 
+def umount(fs_dir):
+    output = os.popen('/bin/umount %s 2>&1'%fs_dir).read()
+    return ('device is busy' not in fs_dir)
+
+
 """
 parser = OptionParser()
 parser.add_option("-n", "--net",
@@ -95,6 +100,20 @@ r3 = setns.chcontext('/proc/%s/ns/net'%pid)
 
 open('/proc/lxcsu','w').write(pid)
 open('/proc/pidsu','w').write(pid)
+
+# cgroups is not yet LXC-safe, so we need to use the course grained access control
+# strategy of unmounting the filesystem
+
+umount_result = True
+for subsystem in ['cpuset','cpu,cpuacct','memory','devices','freezer','net_cls','blkio','perf_event']:
+    fs_path = '/sys/fs/cgroup/%s'%subsystem
+    if (not umount(fs_path)):
+        print "Error disabling cgroup access"
+        exit(1)
+
+if (not umount('/sys/fs/cgroup')):
+    print "Error disabling cgroup access"
+    exit(1)
 
 pid = os.fork()
 
