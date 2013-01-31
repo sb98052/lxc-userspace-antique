@@ -43,7 +43,7 @@ cp build/lib*/setns.so $RPM_BUILD_ROOT/usr/sbin
 rm -rf $RPM_BUILD_ROOT
 
 %files
-/usr/sbin
+/usr/sbin/*
 
 %post
 chmod u+s /usr/sbin/vsh
