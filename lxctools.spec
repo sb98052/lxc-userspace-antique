@@ -1,6 +1,6 @@
 %define name lxctools
 %define version 0.9
-%define taglevel 1
+%define taglevel 2
 
 %define percent %
 %define braop \{
@@ -51,3 +51,6 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Fri Feb 22 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxctools-0.9-2
+- various fixes
+
