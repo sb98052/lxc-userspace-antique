@@ -124,7 +124,5 @@ if (pid == 0):
     os.environ['SHELL'] = '/bin/sh'
     os.execv('/usr/sbin/capsh',exec_args)
 else:
-    (r_pid,combined)=os.waitpid(pid,0)
-    retcod=combined/256
-    sys.exit(retcod)
-    
+    _,status = os.waitpid(pid,0)
+    exit(os.WEXITSTATUS(status))
