@@ -1,6 +1,6 @@
 %define name lxctools
 %define version 0.9
-%define taglevel 3
+%define taglevel 4
 
 %define percent %
 %define braop \{
@@ -51,6 +51,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Thu Mar 07 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxctools-0.9-4
+- nicer polish to lxcsu returning the right thing
+
 * Mon Mar 04 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxctools-0.9-3
 - lxcsu to propagate its forked process's return code
 
