@@ -5,7 +5,7 @@ import setns
 import os
 import sys
 
-#from optparse import OptionParser
+from optparse import OptionParser
 
 drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
 
@@ -13,22 +13,21 @@ def umount(fs_dir):
     output = os.popen('/bin/umount %s 2>&1'%fs_dir).read()
     return ('device is busy' not in fs_dir)
 
-
-"""
 parser = OptionParser()
-parser.add_option("-n", "--net",
+parser.add_option("-n", "--nonet",
                   action="store_true", dest="netns", default=False,
-                  help="Enter network namespace")
-parser.add_option("-m", "--mnt",
+                  help="Don't enter network namespace")
+parser.add_option("-m", "--nomnt",
                   action="store_true", dest="mntns", default=False,
-                  help="Enter mount namespace")
-parser.add_option("-p", "--pid",
+                  help="Don't enter mount namespace")
+parser.add_option("-p", "--nopid",
                   action="store_true", dest="pidns", default=False,
-                  help="Enter pid namespace")
+                  help="Don't enter pid namespace")
+parser.add_option("-r", "--root",
+                  action="store_true", dest="root", default=False,
+                  help="Enter as root: be careful")
 
 (options, args) = parser.parse_args()
-"""
-args = sys.argv[1:]
 
 try:
 	slice_name = args[0]
@@ -94,12 +93,17 @@ except:
     print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
     exit(1)
 
-r1 = setns.chcontext('/proc/%s/ns/uts'%pid)
-r2 = setns.chcontext('/proc/%s/ns/ipc'%pid)
-r3 = setns.chcontext('/proc/%s/ns/net'%pid)
+setns.chcontext('/proc/%s/ns/uts'%pid)
+setns.chcontext('/proc/%s/ns/ipc'%pid)
 
-open('/proc/lxcsu','w').write(pid)
-open('/proc/pidsu','w').write(pid)
+if (not options.netns):
+  setns.chcontext('/proc/%s/ns/net'%pid)
+
+if (not options.mntns):
+  open('/proc/lxcsu','w').write(pid)
+
+if (not options.pidns):
+  open('/proc/pidsu','w').write(pid)
 
 # cgroups is not yet LXC-safe, so we need to use the course grained access control
 # strategy of unmounting the filesystem
@@ -119,7 +123,11 @@ pid = os.fork()
 
 if (pid == 0):
     cap_arg = '--drop='+drop_capabilities
-    exec_args = ['/usr/sbin/capsh',cap_arg,'--','--login']+args[1:]
+    if (not options.root):
+      exec_args = ['/usr/sbin/capsh',cap_arg,'--','--login']+args[1:]
+    else:
+      exec_args = ['/usr/sbin/capsh','--','--login']+args[1:]
+
 
     os.environ['SHELL'] = '/bin/sh'
     os.execv('/usr/sbin/capsh',exec_args)
