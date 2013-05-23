@@ -9,6 +9,18 @@ from optparse import OptionParser
 
 drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
 
+def getarch(f):
+    output = os.popen('readelf -h %s 2>&1'%f).readlines()
+    classlines = [x for x in output if ('Class' in x.split(':')[0])]
+    line = classlines[0]
+    c = line.split(':')[1]
+    if ('ELF64' in c):
+        return 'x86_64'
+    elif ('ELF32' in c):
+        return 'i686'
+    else:
+        raise Exception('Could not determine architecture')
+
 def umount(fs_dir):
     output = os.popen('/bin/umount %s 2>&1'%fs_dir).read()
     return ('device is busy' not in fs_dir)
@@ -30,35 +42,37 @@ parser.add_option("-r", "--root",
 (options, args) = parser.parse_args()
 
 try:
-	slice_name = args[0]
+    slice_name = args[0]
 except IndexError:
-	print "You must specify a vm name"
-	exit(1)
+    print "You must specify a vm name"
+    exit(1)
 
 try:
-	cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
-	output = os.popen(cmd).readlines()
+    cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
+    output = os.popen(cmd).readlines()
 except:
-	print "Error finding slice %s"%slice_name
-	exit(1)
+    print "Error finding slice %s"%slice_name
+    exit(1)
 
 slice_spec = None
-for e in output:
-	try:
-		l = e.rstrip()
-		path = l.split(':')[0]	
-		comp = l.rsplit(':')[-1]
-		slice_name_check = comp.rsplit('/')[-1]
 
-		if (slice_name_check == slice_name):
-			slice_path = path
-			pid = slice_path.split('/')[2]
-			cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
-			if (cmdline == '/sbin/init'):
-				slice_spec = slice_path
-				break
-	except:
-		break
+for e in output:
+    try:
+        l = e.rstrip()
+        path = l.split(':')[0]  
+        comp = l.rsplit(':')[-1]
+        slice_name_check = comp.rsplit('/')[-1]
+
+        if (slice_name_check == slice_name):
+            slice_path = path
+            pid = slice_path.split('/')[2]
+            cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
+            if (cmdline == '/sbin/init'):
+                slice_spec = slice_path
+                arch = getarch('/proc/%s/exe'%pid)
+                break
+    except:
+        break
 
 if (not slice_spec or not pid):
     print "Not started: %s"%slice_name
@@ -121,16 +135,17 @@ if (not umount('/sys/fs/cgroup')):
 
 pid = os.fork()
 
+#arch = 'x86_64'
 if (pid == 0):
     cap_arg = '--drop='+drop_capabilities
-    if (not options.root):
-      exec_args = ['/usr/sbin/capsh',cap_arg,'--','--login']+args[1:]
-    else:
-      exec_args = ['/usr/sbin/capsh','--','--login']+args[1:]
 
+    if (not options.root):
+      exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+args[1:]
+    else:
+      exec_args = [arch,'/usr/sbin/capsh','--','--login']+args[1:]
 
     os.environ['SHELL'] = '/bin/sh'
-    os.execv('/usr/sbin/capsh',exec_args)
+    os.execv('/usr/bin/setarch',exec_args)
 else:
     _,status = os.waitpid(pid,0)
     exit(os.WEXITSTATUS(status))
