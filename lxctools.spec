@@ -51,6 +51,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Tue Apr 23 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxctools-0.9-5
+- more flexible and more robust lxcsu
+
 * Thu Mar 07 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxctools-0.9-4
 - nicer polish to lxcsu returning the right thing
 
