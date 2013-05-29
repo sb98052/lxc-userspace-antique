@@ -1,6 +1,6 @@
 %define name lxctools
 %define version 0.9
-%define taglevel 5
+%define taglevel 6
 
 %define percent %
 %define braop \{
@@ -51,6 +51,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Wed May 29 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxctools-0.9-6
+- implements vm's arch
+
 * Tue Apr 23 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxctools-0.9-5
 - more flexible and more robust lxcsu
 
