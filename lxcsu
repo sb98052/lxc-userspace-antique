@@ -5,7 +5,7 @@ import setns
 import os
 import sys
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
 
@@ -26,27 +26,23 @@ def umount(fs_dir):
     return ('device is busy' not in fs_dir)
 
 def main ():
-    parser = OptionParser()
-    parser.add_option("-n", "--nonet",
-                      action="store_true", dest="netns", default=False,
-                      help="Don't enter network namespace")
-    parser.add_option("-m", "--nomnt",
-                      action="store_true", dest="mntns", default=False,
-                      help="Don't enter mount namespace")
-    parser.add_option("-p", "--nopid",
-                      action="store_true", dest="pidns", default=False,
-                      help="Don't enter pid namespace")
-    parser.add_option("-r", "--root",
-                      action="store_true", dest="root", default=False,
-                      help="Enter as root: be careful")
+    parser = ArgumentParser()
+    parser.add_argument("-n", "--nonet",
+                        action="store_true", dest="netns", default=False,
+                        help="Don't enter network namespace")
+    parser.add_argument("-m", "--nomnt",
+                        action="store_true", dest="mntns", default=False,
+                        help="Don't enter mount namespace")
+    parser.add_argument("-p", "--nopid",
+                        action="store_true", dest="pidns", default=False,
+                        help="Don't enter pid namespace")
+    parser.add_argument("-r", "--root",
+                        action="store_true", dest="root", default=False,
+                        help="Enter as root: be careful")
+    parser.add_argument ("slice",dest="slice_name",nargs=1)
 
-    (options, args) = parser.parse_args()
-
-    try:
-        slice_name = args[0]
-    except IndexError:
-        print "You must specify a vm name"
-        exit(1)
+    options = parser.parse_args()
+    slice_name=options.slice_name
 
     try:
         cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
