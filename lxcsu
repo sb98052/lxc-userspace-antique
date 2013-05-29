@@ -56,6 +56,9 @@ except:
 
 slice_spec = None
 
+# xxx fixme xxx - provide a default as this is not always properly computed
+arch = 'x86_64'
+
 for e in output:
     try:
         l = e.rstrip()
@@ -135,7 +138,6 @@ if (not umount('/sys/fs/cgroup')):
 
 pid = os.fork()
 
-#arch = 'x86_64'
 if (pid == 0):
     cap_arg = '--drop='+drop_capabilities
 
