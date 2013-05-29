@@ -22,6 +22,7 @@ License: GPL
 Group: System Environment/Kernel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Source0: lxctools-%{version}.tar.gz
+Requires: binutils
 
 %description
 Userspace tools for switching between lxc containers.
