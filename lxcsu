@@ -9,8 +9,11 @@ from argparse import ArgumentParser
 
 drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
 
+debug = False
+
 def getarch(f):
     output = os.popen('readelf -h %s 2>&1'%f).readlines()
+    if debug: print "readelf output %s lines"%len(output)
     classlines = [x for x in output if ('Class' in x.split(':')[0])]
     line = classlines[0]
     c = line.split(':')[1]
@@ -39,22 +42,29 @@ def main ():
     parser.add_argument("-r", "--root",
                         action="store_true", dest="root", default=False,
                         help="Enter as root: be careful")
-    parser.add_argument ("slice",dest="slice_name",nargs=1)
+    parser.add_argument("-d","--debug",
+                        action='store_true', dest='debug', default=False,
+                        help="debug option")
+    parser.add_argument ("slice_name")
+    parser.add_argument ("command_to_run",nargs="*")
 
     options = parser.parse_args()
     slice_name=options.slice_name
+    global debug
+    debug=options.debug
 
     try:
         cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
         output = os.popen(cmd).readlines()
+        if debug: print "output of grep freezer has %s lines"%len(output)
     except:
         print "Error finding slice %s"%slice_name
         exit(1)
 
     slice_spec = None
 
-    # xxx fixme xxx - provide a default as this is not always properly computed
-    arch = 'x86_64'
+    # provide a default as this is not always properly computed
+    arch = None
 
     for e in output:
         try:
@@ -62,21 +72,33 @@ def main ():
             path = l.split(':')[0]  
             comp = l.rsplit(':')[-1]
             slice_name_check = comp.rsplit('/')[-1]
+            if debug: print "dealing with >%s<"%slice_name_check
             
             if (slice_name_check == slice_name):
+                if debug: print "found %s"%slice_name
                 slice_path = path
                 pid = slice_path.split('/')[2]
                 cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
                 if (cmdline == '/sbin/init'):
                     slice_spec = slice_path
                     arch = getarch('/proc/%s/exe'%pid)
+                    if debug: print "setting arch",arch
                     break
-        except:
-            break
+        except Exception,e:
+            if debug: 
+                import traceback
+                print "BEG lxcsu - ignoring exception"
+                traceback.print_exc()
+                print "END lxcsu - ignoring exception"
+            pass
 
     if (not slice_spec or not pid):
         print "Not started: %s"%slice_name
         exit(1)
+
+    if arch is None:
+        arch = 'x86_64'
+        if debug: print "WARNING: setting arch to default x86_64"
 
     # Enter cgroups
     try:
@@ -139,10 +161,13 @@ def main ():
         cap_arg = '--drop='+drop_capabilities
 
         if (not options.root):
-            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+args[1:]
+            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+options.command_to_run
         else:
-            exec_args = [arch,'/usr/sbin/capsh','--','--login']+args[1:]
+            exec_args = [arch,'/usr/sbin/capsh','--','--login']+options.command_to_run
 
+        if debug:
+            print "exec'ing"
+            for arg in exec_args: print ">%s<"%arg
         os.environ['SHELL'] = '/bin/sh'
         os.execv('/usr/bin/setarch',exec_args)
     else:
