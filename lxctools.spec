@@ -1,6 +1,6 @@
 %define name lxctools
 %define version 0.9
-%define taglevel 7
+%define taglevel 8
 
 %define percent %
 %define braop \{
@@ -52,6 +52,11 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Mon Jun 03 2013 Sapan Bhatia <sapanb@cs.princeton.edu> - lxctools-0.9-8
+- - Upgraded code for compatibility with kernel 3.6.9
+- - Obsoleted modules for switching into mnt and pid namespaces
+- - Added command to mount /proc if not mounted
+
 * Wed May 29 2013 Andy Bavier <acb@cs.princeton.edu> - lxctools-0.9-7
 - Use ArgumentParser, fix issue with sensing arch
 
