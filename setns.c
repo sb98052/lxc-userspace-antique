@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <asm-generic/unistd.h>
+#include <sys/mount.h>
 
 static PyObject *
 chfscontext(PyObject *self, PyObject *args)
@@ -27,6 +28,16 @@ chfscontext(PyObject *self, PyObject *args)
 out:
     return Py_BuildValue("i", sts);
 }
+
+static PyObject *
+proc_mount(PyObject *self, PyObject *args)
+{
+    int sts; 
+    sts = mount("none","/proc","procfs",0,NULL);
+
+    return Py_BuildValue("i", sts);
+}
+
 static PyObject *
 chcontext(PyObject *self, PyObject *args)
 {
@@ -54,6 +65,7 @@ out:
 
 static PyMethodDef SetnsMethods[] =
 {
+         {"proc_mount", proc_mount, METH_VARARGS, "Mount a volume via the mount system call."},
          {"chcontext", chcontext, METH_VARARGS, "Switch into an lxc container."},
          {"chfscontext", chfscontext, METH_VARARGS, "Switch into an lxc container."},
               {NULL, NULL, 0, NULL}

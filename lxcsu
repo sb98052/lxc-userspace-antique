@@ -136,10 +136,13 @@ def main ():
         setns.chcontext('/proc/%s/ns/net'%pid)
 
     if (not options.mntns):
-        open('/proc/lxcsu','w').write(pid)
+        setns.chcontext('/proc/%s/ns/mnt'%pid)
 
     if (not options.pidns):
-        open('/proc/pidsu','w').write(pid)
+        setns.chcontext('/proc/%s/ns/pid'%pid)
+
+    if (!os.access('/proc/self'):
+        setns.proc_mount()
 
     # cgroups is not yet LXC-safe, so we need to use the course grained access control
     # strategy of unmounting the filesystem
