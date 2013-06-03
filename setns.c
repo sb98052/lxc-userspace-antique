@@ -33,7 +33,7 @@ static PyObject *
 proc_mount(PyObject *self, PyObject *args)
 {
     int sts; 
-    sts = mount("none","/proc","procfs",0,NULL);
+    sts = mount("none","/proc","proc",0,NULL);
 
     return Py_BuildValue("i", sts);
 }

@@ -141,7 +141,7 @@ def main ():
     if (not options.pidns):
         setns.chcontext('/proc/%s/ns/pid'%pid)
 
-    if (!os.access('/proc/self'):
+    if (not os.access('/proc/self',0)):
         setns.proc_mount()
 
     # cgroups is not yet LXC-safe, so we need to use the course grained access control
