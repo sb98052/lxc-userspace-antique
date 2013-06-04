@@ -1,6 +1,6 @@
-%define name lxctools
-%define version 0.9
-%define taglevel 8
+%define name lxc-userspace
+%define version 1.0
+%define taglevel 0
 
 %define percent %
 %define braop \{
@@ -21,8 +21,10 @@ Release: %{release}
 License: GPL
 Group: System Environment/Kernel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-Source0: lxctools-%{version}.tar.gz
+Source0: lxc-userspace-%{version}.tar.gz
 Requires: binutils
+
+Obsoletes: lxctools
 
 %description
 Userspace tools for switching between lxc containers.
