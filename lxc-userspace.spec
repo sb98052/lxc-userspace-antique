@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 0
+%define taglevel 1
 
 %define percent %
 %define braop \{
@@ -54,6 +54,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Wed Jun 05 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-1
+- rename module and package from lxctools into lxc-userspace
+
 * Mon Jun 03 2013 Sapan Bhatia <sapanb@cs.princeton.edu> - lxctools-0.9-8
 - - Upgraded code for compatibility with kernel 3.6.9
 - - Obsoleted modules for switching into mnt and pid namespaces
