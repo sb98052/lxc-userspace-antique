@@ -100,6 +100,18 @@ def main ():
         arch = 'x86_64'
         if debug: print "WARNING: setting arch to default x86_64"
 
+    # Set sysctls specific to slice
+    sysctl_dir = '/etc/planetlab/vsys-attributes/%s'%slice_name
+    if (os.access(sysctl_dir,0)):
+        entries = os.listdir(sysctl_dir)
+        for e in entries:
+            prefix = 'vsys_sysctl.'
+            if (e.startswith(prefix)):
+                sysctl_file = '/'.join([sysctl_dir,e])
+                sysctl_name = e[len(prefix):]
+                sysctl_val = open(sysctl_file).read()
+                os.system('sysctl -w %s=%s'%(sysctl_name,sysctl_val)) 
+        
     # Enter cgroups
     try:
         for subsystem in ['cpuset','memory','blkio']:
