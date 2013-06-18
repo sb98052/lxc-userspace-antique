@@ -14,6 +14,9 @@ def main ():
     options = parser.parse_args()
     slice_name=options.slice_name
     commands = options.command_to_run
+    if (not commands):
+        commands = ['/bin/sh']
+
 
     exec_args = [LXCSU_INTERNAL,slice_name,'--']
     exec_args+=commands
