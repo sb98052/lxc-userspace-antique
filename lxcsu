@@ -1,181 +1,23 @@
 #!/usr/bin/python
 
-
-import setns
 import os
 import sys
 
 from argparse import ArgumentParser
-
-drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
-
-debug = False
-
-def getarch(f):
-    output = os.popen('readelf -h %s 2>&1'%f).readlines()
-    if debug: print "readelf output %s lines"%len(output)
-    classlines = [x for x in output if ('Class' in x.split(':')[0])]
-    line = classlines[0]
-    c = line.split(':')[1]
-    if ('ELF64' in c):
-        return 'x86_64'
-    elif ('ELF32' in c):
-        return 'i686'
-    else:
-        raise Exception('Could not determine architecture')
-
-def umount(fs_dir):
-    output = os.popen('/bin/umount %s 2>&1'%fs_dir).read()
-    return ('device is busy' not in fs_dir)
+LXCSU_INTERNAL='/usr/sbin/lxcsu-internal'
 
 def main ():
     parser = ArgumentParser()
-    parser.add_argument("-n", "--nonet",
-                        action="store_true", dest="netns", default=False,
-                        help="Don't enter network namespace")
-    parser.add_argument("-m", "--nomnt",
-                        action="store_true", dest="mntns", default=False,
-                        help="Don't enter mount namespace")
-    parser.add_argument("-p", "--nopid",
-                        action="store_true", dest="pidns", default=False,
-                        help="Don't enter pid namespace")
-    parser.add_argument("-r", "--root",
-                        action="store_true", dest="root", default=False,
-                        help="Enter as root: be careful")
-    parser.add_argument("-d","--debug",
-                        action='store_true', dest='debug', default=False,
-                        help="debug option")
     parser.add_argument ("slice_name")
     parser.add_argument ("command_to_run",nargs="*")
 
     options = parser.parse_args()
     slice_name=options.slice_name
-    global debug
-    debug=options.debug
+    commands = options.command_to_run
 
-    try:
-        cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
-        output = os.popen(cmd).readlines()
-        if debug: print "output of grep freezer has %s lines"%len(output)
-    except:
-        print "Error finding slice %s"%slice_name
-        exit(1)
-
-    slice_spec = None
-
-    # provide a default as this is not always properly computed
-    arch = None
-
-    for e in output:
-        try:
-            l = e.rstrip()
-            path = l.split(':')[0]  
-            comp = l.rsplit(':')[-1]
-            slice_name_check = comp.rsplit('/')[-1]
-            if debug: print "dealing with >%s<"%slice_name_check
-            
-            if (slice_name_check == slice_name):
-                if debug: print "found %s"%slice_name
-                slice_path = path
-                pid = slice_path.split('/')[2]
-                cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
-                if (cmdline == '/sbin/init'):
-                    slice_spec = slice_path
-                    arch = getarch('/proc/%s/exe'%pid)
-                    if debug: print "setting arch",arch
-                    break
-        except Exception,e:
-            if debug: 
-                import traceback
-                print "BEG lxcsu - ignoring exception"
-                traceback.print_exc()
-                print "END lxcsu - ignoring exception"
-            pass
-
-    if (not slice_spec or not pid):
-        print "Not started: %s"%slice_name
-        exit(1)
-
-    if arch is None:
-        arch = 'x86_64'
-        if debug: print "WARNING: setting arch to default x86_64"
-
-    # Enter cgroups
-    try:
-        for subsystem in ['cpuset','memory','blkio']:
-            open('/sys/fs/cgroup/%s/libvirt/lxc/%s/tasks'%(subsystem,slice_name),'w').write(str(os.getpid()))
-
-    except:
-        print "Error assigning resources: %s"%slice_name
-        exit(1)
-
-    try:
-        open('/sys/fs/cgroup/cpuacct/system/libvirtd.service/libvirt/lxc/%s/tasks'%slice_name,'w').write(str(os.getpid()))
-    except:
-        print "Error assigning cpuacct: %s" % slice_name
-        exit(1)
-
-    # If the slice is frozen, then we'll get an EBUSY when trying to write to the task
-    # list for the freezer cgroup. Since the user couldn't do anything anyway, it's best
-    # in this case to error out the shell. (an alternative would be to un-freeze it,
-    # add the task, and re-freeze it)
-    try:
-        f=open('/sys/fs/cgroup/freezer/libvirt/lxc/%s/tasks'%(slice_name),'w')
-        f.write(str(os.getpid()))
-        # note: we need to call f.close() explicitly, or we'll get an exception in
-        # the object destructor, which will not be caught
-        f.close()
-    except:
-        print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
-        exit(1)
-
-    setns.chcontext('/proc/%s/ns/uts'%pid)
-    setns.chcontext('/proc/%s/ns/ipc'%pid)
-
-    if (not options.netns):
-        setns.chcontext('/proc/%s/ns/net'%pid)
-
-    if (not options.mntns):
-        setns.chcontext('/proc/%s/ns/mnt'%pid)
-
-    if (not options.pidns):
-        setns.chcontext('/proc/%s/ns/pid'%pid)
-
-    if (not os.access('/proc/self',0)):
-        setns.proc_mount()
-
-    # cgroups is not yet LXC-safe, so we need to use the course grained access control
-    # strategy of unmounting the filesystem
-
-    umount_result = True
-    for subsystem in ['cpuset','cpu,cpuacct','memory','devices','freezer','net_cls','blkio','perf_event']:
-        fs_path = '/sys/fs/cgroup/%s'%subsystem
-        if (not umount(fs_path)):
-            print "Error disabling cgroup access"
-            exit(1)
-
-    if (not umount('/sys/fs/cgroup')):
-        print "Error disabling cgroup access"
-        exit(1)
-
-    pid = os.fork()
-
-    if (pid == 0):
-        cap_arg = '--drop='+drop_capabilities
-
-        if (not options.root):
-            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+options.command_to_run
-        else:
-            exec_args = [arch,'/usr/sbin/capsh','--','--login']+options.command_to_run
-
-        if debug:
-            print "exec'ing"
-            for arg in exec_args: print ">%s<"%arg
-        os.environ['SHELL'] = '/bin/sh'
-        os.execv('/usr/bin/setarch',exec_args)
-    else:
-        _,status = os.waitpid(pid,0)
-        exit(os.WEXITSTATUS(status))
+    exec_args = [LXCSU_INTERNAL,slice_name,'--']
+    exec_args+=commands
+    os.execv(LXCSU_INTERNAL,exec_args)
 
 if __name__ == '__main__':
     main()

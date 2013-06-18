@@ -1,4 +1,4 @@
-/* Version 3 of vsh. Basically a wrapper around 'lxcsu -n -m <slicename>' - Sapan */
+/* Version 3 of vsh. Basically a wrapper around 'lxcsu-internal -n -m <slicename>' - Sapan */
 
 #include <unistd.h>
 #include <pwd.h>
@@ -14,7 +14,7 @@
 #define PATH_MAX    4096
 #endif
 
-#define LXCSU_PATH  "/usr/sbin/lxcsu"
+#define LXCSU_PATH  "/usr/sbin/lxcsu-internal"
 
 char* get_current_username (unsigned int uid)
 {
