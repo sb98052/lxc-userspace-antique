@@ -39,6 +39,7 @@ make
 mkdir -p $RPM_BUILD_ROOT/usr/sbin
 install -D -m 755 vsh $RPM_BUILD_ROOT/usr/sbin/vsh
 install -D -m 755 lxcsu $RPM_BUILD_ROOT/usr/sbin/lxcsu
+install -D -m 755 lxcsu $RPM_BUILD_ROOT/usr/sbin/lxcsu-internal
 chmod u+s $RPM_BUILD_ROOT/usr/sbin/lxcsu
 cp build/lib*/setns.so $RPM_BUILD_ROOT/usr/sbin
 
