@@ -13,7 +13,6 @@ debug = False
 
 def getarch(f):
     output = os.popen('readelf -h %s 2>&1'%f).readlines()
-    if debug: print "readelf output %s lines"%len(output)
     classlines = [x for x in output if ('Class' in x.split(':')[0])]
     line = classlines[0]
     c = line.split(':')[1]
@@ -50,13 +49,15 @@ def main ():
 
     options = parser.parse_args()
     slice_name=options.slice_name
-    global debug
-    debug=options.debug
+    # support for either setting debug at the top of this file, or on the command-line
+    if options.debug:
+        global debug
+        debug=True
 
     try:
         cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
         output = os.popen(cmd).readlines()
-        if debug: print "output of grep freezer has %s lines"%len(output)
+#        if debug: print "output of grep freezer has %s lines"%len(output)
     except:
         print "Error finding slice %s"%slice_name
         exit(1)
@@ -82,7 +83,6 @@ def main ():
                 if (cmdline == '/sbin/init'):
                     slice_spec = slice_path
                     arch = getarch('/proc/%s/exe'%pid)
-                    if debug: print "setting arch",arch
                     break
         except Exception,e:
             if debug: 
@@ -98,7 +98,6 @@ def main ():
 
     if arch is None:
         arch = 'x86_64'
-        if debug: print "WARNING: setting arch to default x86_64"
 
     # Set sysctls specific to slice
     sysctl_dir = '/etc/planetlab/vsys-attributes/%s'%slice_name
@@ -177,13 +176,13 @@ def main ():
 
         if (not options.root):
             exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+options.command_to_run
+# Thierry's suggestion:exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+options.command_to_run
         else:
             exec_args = [arch,'/usr/sbin/capsh','--','--login']+options.command_to_run
 
-        if debug:
-            print "exec'ing"
-            for arg in exec_args: print ">%s<"%arg
         os.environ['SHELL'] = '/bin/sh'
+# Thierry's suggestion:os.environ['HOME'] = '/home/%s'%slice_name
+        if debug: print 'lxcsu-internal:execv:','/usr/bin/setarch',exec_args
         os.execv('/usr/bin/setarch',exec_args)
     else:
         _,status = os.waitpid(pid,0)
