@@ -25,7 +25,7 @@ def getarch(f):
 
 def umount(fs_dir):
     output = os.popen('/bin/umount %s 2>&1'%fs_dir).read()
-    return ('device is busy' not in fs_dir)
+    return ('device is busy' not in output)
 
 def main ():
     parser = ArgumentParser()
