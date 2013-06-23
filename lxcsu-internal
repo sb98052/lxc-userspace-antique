@@ -47,10 +47,10 @@ def main ():
     parser.add_argument ("slice_name")
     parser.add_argument ("command_to_run",nargs="*")
 
-    options = parser.parse_args()
-    slice_name=options.slice_name
+    args = parser.parse_args()
+    slice_name=args.slice_name
     # support for either setting debug at the top of this file, or on the command-line
-    if options.debug:
+    if args.debug:
         global debug
         debug=True
 
@@ -143,13 +143,13 @@ def main ():
     setns.chcontext('/proc/%s/ns/uts'%pid)
     setns.chcontext('/proc/%s/ns/ipc'%pid)
 
-    if (not options.netns):
+    if (not args.netns):
         setns.chcontext('/proc/%s/ns/net'%pid)
 
-    if (not options.mntns):
+    if (not args.mntns):
         setns.chcontext('/proc/%s/ns/mnt'%pid)
 
-    if (not options.pidns):
+    if (not args.pidns):
         setns.chcontext('/proc/%s/ns/pid'%pid)
 
     if (not os.access('/proc/self',0)):
@@ -174,11 +174,11 @@ def main ():
     if (pid == 0):
         cap_arg = '--drop='+drop_capabilities
 
-        if (not options.root):
-            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+options.command_to_run
-# Thierry's suggestion:exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+options.command_to_run
+        if (not args.root):
+            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+args.command_to_run
+# Thierry's suggestion:exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
         else:
-            exec_args = [arch,'/usr/sbin/capsh','--','--login']+options.command_to_run
+            exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
 
         os.environ['SHELL'] = '/bin/sh'
 # Thierry's suggestion:os.environ['HOME'] = '/home/%s'%slice_name
