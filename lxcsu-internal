@@ -80,7 +80,7 @@ def main ():
                 slice_path = path
                 pid = slice_path.split('/')[2]
                 cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
-                if (cmdline == '/sbin/init'):
+                if (cmdline == '/sbin/init') or (cmdline.startswith("init [")):
                     slice_spec = slice_path
                     arch = getarch('/proc/%s/exe'%pid)
                     break
