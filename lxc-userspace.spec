@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 1
+%define taglevel 2
 
 %define percent %
 %define braop \{
@@ -55,6 +55,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Wed Jun 26 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-2
+- split into lxcsu{,-internal}
+
 * Wed Jun 05 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-1
 - rename module and package from lxctools into lxc-userspace
 
