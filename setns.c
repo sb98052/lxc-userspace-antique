@@ -39,6 +39,16 @@ proc_mount(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+proc_umount(PyObject *self, PyObject *args)
+{
+    int sts; 
+    sts = umount("/proc");
+
+    return Py_BuildValue("i", sts);
+
+}
+
+static PyObject *
 chcontext(PyObject *self, PyObject *args)
 {
     const char *filepath;
@@ -66,6 +76,7 @@ out:
 static PyMethodDef SetnsMethods[] =
 {
          {"proc_mount", proc_mount, METH_VARARGS, "Mount a volume via the mount system call."},
+         {"proc_umount", proc_umount, METH_VARARGS, "Umount a volume via the umount system call."},
          {"chcontext", chcontext, METH_VARARGS, "Switch into an lxc container."},
          {"chfscontext", chfscontext, METH_VARARGS, "Switch into an lxc container."},
               {NULL, NULL, 0, NULL}

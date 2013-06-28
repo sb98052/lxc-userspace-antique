@@ -152,8 +152,12 @@ def main ():
     if (not args.pidns):
         setns.chcontext('/proc/%s/ns/pid'%pid)
 
+    proc_mounted = False
     if (not os.access('/proc/self',0)):
+        proc_mounted = True
         setns.proc_mount()
+
+    
 
     # cgroups is not yet LXC-safe, so we need to use the course grained access control
     # strategy of unmounting the filesystem
@@ -185,6 +189,7 @@ def main ():
         if debug: print 'lxcsu-internal:execv:','/usr/bin/setarch',exec_args
         os.execv('/usr/bin/setarch',exec_args)
     else:
+        setns.proc_umount()
         _,status = os.waitpid(pid,0)
         exit(os.WEXITSTATUS(status))
 
