@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 2
+%define taglevel 3
 
 %define percent %
 %define braop \{
@@ -55,6 +55,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Fri Jun 28 2013 Sapan Bhatia <sapanb@cs.princeton.edu> - lxc-userspace-1.0-3
+- Fixed bug that would let slices see all processes in root context.
+
 * Wed Jun 26 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-2
 - split into lxcsu{,-internal}
 
