@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 3
+%define taglevel 4
 
 %define percent %
 %define braop \{
@@ -55,6 +55,11 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Mon Jul 01 2013 Sapan Bhatia <sapanb@cs.princeton.edu> - lxc-userspace-1.0-4
+- Bug fixes:
+- - lxcsu <slice_name> works again
+- - pid namespace issue that would let slices see all processes
+
 * Fri Jun 28 2013 Sapan Bhatia <sapanb@cs.princeton.edu> - lxc-userspace-1.0-3
 - Fixed bug that would let slices see all processes in root context.
 
