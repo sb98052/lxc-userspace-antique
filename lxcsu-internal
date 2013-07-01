@@ -142,6 +142,9 @@ def main ():
 
     setns.chcontext('/proc/%s/ns/uts'%pid)
     setns.chcontext('/proc/%s/ns/ipc'%pid)
+    
+    if (not args.pidns):
+        setns.chcontext('/proc/%s/ns/pid'%pid)
 
     if (not args.netns):
         setns.chcontext('/proc/%s/ns/net'%pid)
@@ -149,8 +152,7 @@ def main ():
     if (not args.mntns):
         setns.chcontext('/proc/%s/ns/mnt'%pid)
 
-    if (not args.pidns):
-        setns.chcontext('/proc/%s/ns/pid'%pid)
+    
 
     proc_mounted = False
     if (not os.access('/proc/self',0)):

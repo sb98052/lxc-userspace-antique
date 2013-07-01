@@ -15,12 +15,11 @@ chfscontext(PyObject *self, PyObject *args)
 
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
-	    //printf("Could not open ns file\n");
         sts = -1;
         goto out;
     }
     
-    if (setns(fd, 666)) {
+    if (setns(fd, 0)) {
         sts = -1;
     }
     close(fd);
@@ -59,7 +58,6 @@ chcontext(PyObject *self, PyObject *args)
 
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
-//	printf("Could not open ns file\n");
         sts = -1;
         goto out;
     }
