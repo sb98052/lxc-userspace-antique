@@ -4,6 +4,7 @@ import os
 import sys
 
 from argparse import ArgumentParser
+
 LXCSU_INTERNAL='/usr/sbin/lxcsu-internal'
 
 def main ():
@@ -18,7 +19,7 @@ def main ():
         commands = ['/bin/sh']
 
 
-    exec_args = [LXCSU_INTERNAL,slice_name,'--']
+    exec_args = [LXCSU_INTERNAL,slice_name,'--','-c']
     exec_args+=commands
     os.execv(LXCSU_INTERNAL,exec_args)
 
