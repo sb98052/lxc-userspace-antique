@@ -186,7 +186,8 @@ def main ():
             exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
 
         os.environ['SHELL'] = '/bin/sh'
-# Thierry's suggestion:os.environ['HOME'] = '/home/%s'%slice_name
+        os.environ['HOME'] = '/home/%s'%slice_name
+        os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
         if debug: print 'lxcsu-internal:execv:','/usr/bin/setarch',exec_args
         os.execv('/usr/bin/setarch',exec_args)
     else:
