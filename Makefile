@@ -35,6 +35,8 @@ ifeq (,$(NODEURL))
 else
 	+$(RSYNC) ./lxcsu ./lxcsu-internal ./vsh.c ./Makefile.vsh $(NODEURL)/usr/sbin/
 	ssh -i $(NODE).key.rsa root@$(NODE) make -C /usr/sbin -f Makefile.vsh vsh
+	ssh -i $(NODE).key.rsa root@$(NODE) chown root:root /usr/sbin/lxcsu /usr/sbin/vsh
+	ssh -i $(NODE).key.rsa root@$(NODE) chmod u+s /usr/sbin/lxcsu /usr/sbin/vsh
 endif
 
 ### fetching the key
