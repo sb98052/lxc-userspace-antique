@@ -181,8 +181,7 @@ def main ():
         cap_arg = '--drop='+drop_capabilities
 
         if (not args.root):
-            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login']+args.command_to_run
-# Thierry's suggestion:exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
+            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
         else:
             exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
 
