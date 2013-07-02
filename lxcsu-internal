@@ -188,6 +188,7 @@ def main ():
         os.environ['SHELL'] = '/bin/sh'
         os.environ['HOME'] = '/home/%s'%slice_name
         os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
+        os.chdir("/home/%s"%(slice_name))
         if debug: print 'lxcsu-internal:execv:','/usr/bin/setarch',exec_args
         os.execv('/usr/bin/setarch',exec_args)
     else:
