@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 4
+%define taglevel 5
 
 %define percent %
 %define braop \{
@@ -55,6 +55,10 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Wed Jul 03 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-5
+- entering in a slice now correctly ends up with right uid and pwd
+- make sync
+
 * Mon Jul 01 2013 Sapan Bhatia <sapanb@cs.princeton.edu> - lxc-userspace-1.0-4
 - Bug fixes:
 - - lxcsu <slice_name> works again
