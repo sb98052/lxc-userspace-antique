@@ -215,7 +215,7 @@ def main ():
         if (not args.root):
             uid = getuid (slice_name)
             if not uid:
-                print "lxcsu-internal could not spot %s in /etc/passwd - exiting"%slice_name
+                print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
                 exit(1)
             exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--uid=%s'%uid,'--','--login',]+args.command_to_run
 # once we can drop f12, it would be nicer to instead go for
@@ -227,7 +227,7 @@ def main ():
         os.environ['HOME'] = '/home/%s'%slice_name
         os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
         os.chdir("/home/%s"%(slice_name))
-        print 'lxcsu-internal:execv:','/usr/bin/setarch',exec_args
+        if debug: print 'lxcsu:execv:','/usr/bin/setarch',exec_args
         os.execv('/usr/bin/setarch',exec_args)
     else:
         setns.proc_umount()
