@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 5
+%define taglevel 6
 
 %define percent %
 %define braop \{
@@ -55,6 +55,10 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Sun Jul 14 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-6
+- merge back lxcsu and -internal into a single source file
+- capsh --uid instead of --user that was not yet supported in f12 (hopefully tmp)
+
 * Wed Jul 03 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-5
 - entering in a slice now correctly ends up with right uid and pwd
 - make sync
