@@ -112,6 +112,7 @@ def main ():
         arch = 'x86_64'
 
     # Set sysctls specific to slice
+    sysctls = []
     sysctl_dir = '/etc/planetlab/vsys-attributes/%s'%slice_name
     if (os.access(sysctl_dir,0)):
         entries = os.listdir(sysctl_dir)
@@ -121,8 +122,8 @@ def main ():
                 sysctl_file = '/'.join([sysctl_dir,e])
                 sysctl_name = e[len(prefix):]
                 sysctl_val = open(sysctl_file).read()
-                os.system('sysctl -w %s=%s'%(sysctl_name,sysctl_val)) 
-        
+                sysctls.append((sysctl_file, sysctl_name, sysctl_val))
+
     # Enter cgroups
     try:
         for subsystem in ['cpuset','memory','blkio']:
@@ -164,14 +165,20 @@ def main ():
     if (not args.mntns):
         setns.chcontext('/proc/%s/ns/mnt'%pid)
 
-    
-
     proc_mounted = False
     if (not os.access('/proc/self',0)):
         proc_mounted = True
         setns.proc_mount()
 
-    
+    for (sysctl_file, sysctl_name, sysctl_val) in sysctls:
+                for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
+                    if os.path.exists(fn):
+                        os.system("mount -o remount,rw none /proc/sys")
+                        os.system('%s -w %s=%s'%(fn, sysctl_name,sysctl_val))
+                        os.system("mount -o remount,ro none /proc/sys")
+                        break
+                else:
+                    print "Error: image does not have a sysctl binary"
 
     # cgroups is not yet LXC-safe, so we need to use the coarse grained access control
     # strategy of unmounting the filesystem
