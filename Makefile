@@ -1,6 +1,11 @@
-all:
-	python setup.py build
+all: vsh setns.so
+	
+vsh: vsh.c
 	gcc vsh.c -o vsh
+
+setns: setns.c
+	python setup.py build
+	
 
 ########## sync
 # for use with the test framework; push local stuff on a test node
@@ -59,3 +64,13 @@ else
 	@echo "FETCHING key"
 	+scp $(KEYURL) $@
 endif
+
+### poor man's install
+
+install: setns vsh
+	mkdir -p /usr/sbin
+	install -D -m 755 vsh /usr/sbin/vsh
+	install -D -m 755 lxcsu /usr/sbin/lxcsu
+	install -D -m 755 lxcsu-internal /usr/sbin/lxcsu-internal
+	chmod u+s /usr/sbin/lxcsu
+	cp build/lib*/setns.so /usr/sbin
