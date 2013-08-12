@@ -1,7 +1,7 @@
 #include <Python.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <asm-generic/unistd.h>
+#include <asm/unistd.h>
 #include <sys/mount.h>
 
 static PyObject *
