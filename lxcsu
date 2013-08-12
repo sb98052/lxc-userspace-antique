@@ -47,6 +47,8 @@ def main ():
     parser.add_argument("-d","--debug",
                         action='store_true', dest='debug', default=False,
                         help="debug option")
+    parser.add_argument("-s","--nosliceuid", dest="nosliceuid", default=False,
+                        help="do not change to slice uid inside of slice")
     parser.add_argument ("slice_name")
     parser.add_argument ("command_to_run",nargs="*")
 
@@ -56,11 +58,16 @@ def main ():
     # unless we run the symlink 'lxcsu-internal', or we specify the -i option, prepend '--' '-c'
     if sys.argv[0].find('internal')>=0: args.internal=True
 
-    # plain lxcsu 
+    if len(args.command_to_run)>0 and (args.command_to_run[0] == "/sbin/service"):
+        # A quick hack to support nodemanager interfaces.py when restarting
+        # networking in a slice.
+        args.nosliceuid = True
+
+    # plain lxcsu
     if not args.internal:
         # no command given: enter interactive shell
         if not args.command_to_run: args.command_to_run=['/bin/sh']
-        args.command_to_run = [ '-c' ] + args.command_to_run
+        args.command_to_run = [ '-c' ] + [" ".join(args.command_to_run)]
 
     # support for either setting debug at the top of this file, or on the command-line
     if args.debug:
@@ -220,13 +227,17 @@ def main ():
         cap_arg = '--drop='+drop_capabilities
 
         if (not args.root):
-            uid = getuid (slice_name)
-            if not uid:
-                print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
-                exit(1)
-            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--uid=%s'%uid,'--','--login',]+args.command_to_run
+            if (args.nosliceuid):
+                # we still want to drop capabilities, but don't want to switch UIDs
+                exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login',]+args.command_to_run
+            else:
+                uid = getuid (slice_name)
+                if not uid:
+                    print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
+                    exit(1)
+                exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--uid=%s'%uid,'--','--login',]+args.command_to_run
 # once we can drop f12, it would be nicer to instead go for
-#            exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
+#                exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
         else:
             exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
 
