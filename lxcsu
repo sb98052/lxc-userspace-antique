@@ -180,9 +180,7 @@ def main ():
     for (sysctl_file, sysctl_name, sysctl_val) in sysctls:
                 for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
                     if os.path.exists(fn):
-                        os.system("mount -o remount,rw none /proc/sys")
                         os.system('%s -w %s=%s'%(fn, sysctl_name,sysctl_val))
-                        os.system("mount -o remount,ro none /proc/sys")
                         break
                 else:
                     print "Error: image does not have a sysctl binary"
@@ -243,7 +241,8 @@ def main ():
 
         os.environ['SHELL'] = '/bin/sh'
         os.environ['HOME'] = '/home/%s'%slice_name
-        os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
+        if os.path.exists('/etc/planetlab/lib/bind_public.so'):
+            os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
         os.chdir("/home/%s"%(slice_name))
         if debug: print 'lxcsu:execv:','/usr/bin/setarch',exec_args
         os.execv('/usr/bin/setarch',exec_args)
