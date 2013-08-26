@@ -1,11 +1,10 @@
-all: vsh setns.so
-	
+all: vsh setns
+
 vsh: vsh.c
 	gcc vsh.c -o vsh
 
 setns: setns.c
 	python setup.py build
-	
 
 ########## sync
 # for use with the test framework; push local stuff on a test node
