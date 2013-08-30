@@ -47,8 +47,17 @@ def main ():
     parser.add_argument("-d","--debug",
                         action='store_true', dest='debug', default=False,
                         help="debug option")
-    parser.add_argument("-s","--nosliceuid", dest="nosliceuid", default=False,
+    parser.add_argument("-s","--nosliceuid",
+                        action='store_true', dest="nosliceuid", default=False,
                         help="do not change to slice uid inside of slice")
+    parser.add_argument("-o","--noslicehome",
+                        action='store_true', dest="noslicehome", default=False,
+                        help="do not change to slice home directory inside of slice")
+
+    if os.path.exists("/etc/lxcsu_default"):
+        defaults = parser.parse_args(file("/etc/lxcsu_default","r").read().split())
+        parser.set_defaults(**defaults.__dict__)
+
     parser.add_argument ("slice_name")
     parser.add_argument ("command_to_run",nargs="*")
 
@@ -240,10 +249,11 @@ def main ():
             exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
 
         os.environ['SHELL'] = '/bin/sh'
-        os.environ['HOME'] = '/home/%s'%slice_name
         if os.path.exists('/etc/planetlab/lib/bind_public.so'):
             os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
-        os.chdir("/home/%s"%(slice_name))
+        if not args.noslicehome:
+            os.environ['HOME'] = '/home/%s'%slice_name
+            os.chdir("/home/%s"%(slice_name))
         if debug: print 'lxcsu:execv:','/usr/bin/setarch',exec_args
         os.execv('/usr/bin/setarch',exec_args)
     else:
