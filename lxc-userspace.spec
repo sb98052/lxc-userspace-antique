@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 6
+%define taglevel 7
 
 %define percent %
 %define braop \{
@@ -55,6 +55,15 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Sat Aug 31 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-7
+- perform vsys sysctl inside of container
+- remove unnecessary proc remounts
+- prevent setting LD_PRELOAD if the library doesn't exist in image
+- add --noslicehome option
+- check /etc/lxcsu_default for default arguments
+- fix permissions
+- support conventional invocation of make
+
 * Sun Jul 14 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-6
 - merge back lxcsu and -internal into a single source file
 - capsh --uid instead of --user that was not yet supported in f12 (hopefully tmp)
