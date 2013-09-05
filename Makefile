@@ -72,4 +72,5 @@ install: setns vsh
 	install -D -m 755 lxcsu /usr/sbin/lxcsu
 	install -D -m 755 lxcsu-internal /usr/sbin/lxcsu-internal
 	chmod u+s /usr/sbin/lxcsu
+	chmod u+s /usr/sbin/vsh
 	cp build/lib*/setns.so /usr/sbin
