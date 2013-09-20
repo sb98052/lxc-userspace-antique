@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 7
+%define taglevel 8
 
 %define percent %
 %define braop \{
@@ -55,6 +55,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Fri Sep 20 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-8
+- fix vsh permissions
+
 * Sat Aug 31 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-7
 - perform vsys sysctl inside of container
 - remove unnecessary proc remounts
