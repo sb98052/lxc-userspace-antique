@@ -189,7 +189,7 @@ def main ():
 	for (sysctl_file, sysctl_name, sysctl_val) in sysctls:
 				for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
 					if os.path.exists(fn):
-						os.system('%s -w %s=%s'%(fn, sysctl_name,sysctl_val))
+						os.system('%s -w %s=%s  >/dev/null 2>&1'%(fn, sysctl_name,sysctl_val))
 						break
 				else:
 					print "Error: image does not have a sysctl binary"
