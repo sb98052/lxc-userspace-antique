@@ -12,256 +12,256 @@ drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
 debug = False
 
 def getarch(f):
-	output = os.popen('readelf -h %s 2>&1'%f).readlines()
-	classlines = [x for x in output if ('Class' in x.split(':')[0])]
-	line = classlines[0]
-	c = line.split(':')[1]
-	if ('ELF64' in c):
-		return 'x86_64'
-	elif ('ELF32' in c):
-		return 'i686'
-	else:
-		raise Exception('Could not determine architecture')
+    output = os.popen('readelf -h %s 2>&1'%f).readlines()
+    classlines = [x for x in output if ('Class' in x.split(':')[0])]
+    line = classlines[0]
+    c = line.split(':')[1]
+    if ('ELF64' in c):
+        return 'x86_64'
+    elif ('ELF32' in c):
+        return 'i686'
+    else:
+        raise Exception('Could not determine architecture')
 
 def umount(fs_dir, opts=''):
-	output = os.popen('/bin/umount %s %s 2>&1'%(opts, fs_dir)).read()
-	return ('device is busy' not in output)
+    output = os.popen('/bin/umount %s %s 2>&1'%(opts, fs_dir)).read()
+    return ('device is busy' not in output)
 
 def main ():
-	parser = ArgumentParser()
-	parser.add_argument("-n", "--nonet",
-						action="store_true", dest="netns", default=False,
-						help="Don't enter network namespace")
-	parser.add_argument("-m", "--nomnt",
-						action="store_true", dest="mntns", default=False,
-						help="Don't enter mount namespace")
-	parser.add_argument("-p", "--nopid",
-						action="store_true", dest="pidns", default=False,
-						help="Don't enter pid namespace")
-	parser.add_argument("-r", "--root",
-						action="store_true", dest="root", default=False,
-						help="Enter as root: be careful")
-	parser.add_argument("-i","--internal",
-						action="store_true", dest="internal", default=False,
-						help="does *not* prepend '-- -c' to arguments - or invoke lxcsu-internal")
-	parser.add_argument("-d","--debug",
-						action='store_true', dest='debug', default=False,
-						help="debug option")
-	parser.add_argument("-s","--nosliceuid",
-						action='store_true', dest="nosliceuid", default=False,
-						help="do not change to slice uid inside of slice")
-	parser.add_argument("-o","--noslicehome",
-						action='store_true', dest="noslicehome", default=False,
-						help="do not change to slice home directory inside of slice")
+    parser = ArgumentParser()
+    parser.add_argument("-n", "--nonet",
+                                        action="store_true", dest="netns", default=False,
+                                        help="Don't enter network namespace")
+    parser.add_argument("-m", "--nomnt",
+                                        action="store_true", dest="mntns", default=False,
+                                        help="Don't enter mount namespace")
+    parser.add_argument("-p", "--nopid",
+                                        action="store_true", dest="pidns", default=False,
+                                        help="Don't enter pid namespace")
+    parser.add_argument("-r", "--root",
+                                        action="store_true", dest="root", default=False,
+                                        help="Enter as root: be careful")
+    parser.add_argument("-i","--internal",
+                                        action="store_true", dest="internal", default=False,
+                                        help="does *not* prepend '-- -c' to arguments - or invoke lxcsu-internal")
+    parser.add_argument("-d","--debug",
+                                        action='store_true', dest='debug', default=False,
+                                        help="debug option")
+    parser.add_argument("-s","--nosliceuid",
+                                        action='store_true', dest="nosliceuid", default=False,
+                                        help="do not change to slice uid inside of slice")
+    parser.add_argument("-o","--noslicehome",
+                                        action='store_true', dest="noslicehome", default=False,
+                                        help="do not change to slice home directory inside of slice")
 
-	if os.path.exists("/etc/lxcsu_default"):
-		defaults = parser.parse_args(file("/etc/lxcsu_default","r").read().split())
-		parser.set_defaults(**defaults.__dict__)
+    if os.path.exists("/etc/lxcsu_default"):
+        defaults = parser.parse_args(file("/etc/lxcsu_default","r").read().split())
+        parser.set_defaults(**defaults.__dict__)
 
-	parser.add_argument ("slice_name")
-	parser.add_argument ("command_to_run",nargs="*")
+        parser.add_argument ("slice_name")
+        parser.add_argument ("command_to_run",nargs="*")
 
-	args = parser.parse_args()
-	slice_name=args.slice_name
+        args = parser.parse_args()
+        slice_name=args.slice_name
 
-	# unless we run the symlink 'lxcsu-internal', or we specify the -i option, prepend '--' '-c'
-	if sys.argv[0].find('internal')>=0: args.internal=True
+        # unless we run the symlink 'lxcsu-internal', or we specify the -i option, prepend '--' '-c'
+        if sys.argv[0].find('internal')>=0: args.internal=True
 
-	if len(args.command_to_run)>0 and (args.command_to_run[0] == "/sbin/service"):
-		# A quick hack to support nodemanager interfaces.py when restarting
-		# networking in a slice.
-		args.nosliceuid = True
+        if len(args.command_to_run)>0 and (args.command_to_run[0] == "/sbin/service"):
+            # A quick hack to support nodemanager interfaces.py when restarting
+            # networking in a slice.
+            args.nosliceuid = True
 
-	# plain lxcsu
-	if not args.internal:
-		# no command given: enter interactive shell
-		if not args.command_to_run: args.command_to_run=['/bin/sh']
-		args.command_to_run = [ '-c' ] + [" ".join(args.command_to_run)]
+        # plain lxcsu
+        if not args.internal:
+            # no command given: enter interactive shell
+            if not args.command_to_run: args.command_to_run=['/bin/sh']
+            args.command_to_run = [ '-c' ] + [" ".join(args.command_to_run)]
 
-	# support for either setting debug at the top of this file, or on the command-line
-	if args.debug:
-		global debug
-		debug=True
+        # support for either setting debug at the top of this file, or on the command-line
+        if args.debug:
+            global debug
+            debug=True
 
-	try:
-		cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
-		output = os.popen(cmd).readlines()
-	except:
-		print "Error finding slice %s"%slice_name
-		exit(1)
+        try:
+            cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
+            output = os.popen(cmd).readlines()
+        except:
+            print "Error finding slice %s"%slice_name
+            exit(1)
 
-	slice_spec = None
+        slice_spec = None
 
-	# provide a default as this is not always properly computed
-	arch = None
+        # provide a default as this is not always properly computed
+        arch = None
 
-	for e in output:
-		try:
-			l = e.rstrip()
-			path = l.split(':')[0]	
-			comp = l.rsplit(':')[-1]
-			slice_name_check = comp.rsplit('/')[-1]
-			if debug: print "dealing with >%s<"%slice_name_check
-			
-			if (slice_name_check == slice_name):
-				if debug: print "found %s"%slice_name
-				slice_path = path
-				pid = slice_path.split('/')[2]
-				cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
-				if (cmdline == '/sbin/init') or (cmdline.startswith("init [")):
-					slice_spec = slice_path
-					arch = getarch('/proc/%s/exe'%pid)
-					break
-		except Exception,e:
-			if debug: 
-				import traceback
-				print "BEG lxcsu - ignoring exception"
-				traceback.print_exc()
-				print "END lxcsu - ignoring exception"
-			pass
+        for e in output:
+            try:
+                l = e.rstrip()
+                path = l.split(':')[0]  
+                comp = l.rsplit(':')[-1]
+                slice_name_check = comp.rsplit('/')[-1]
+                if debug: print "dealing with >%s<"%slice_name_check
+                
+                if (slice_name_check == slice_name):
+                    if debug: print "found %s"%slice_name
+                    slice_path = path
+                    pid = slice_path.split('/')[2]
+                    cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
+                    if (cmdline == '/sbin/init') or (cmdline.startswith("init [")):
+                        slice_spec = slice_path
+                        arch = getarch('/proc/%s/exe'%pid)
+                        break
+            except Exception,e:
+                if debug: 
+                    import traceback
+                    print "BEG lxcsu - ignoring exception"
+                    traceback.print_exc()
+                    print "END lxcsu - ignoring exception"
+                    pass
 
-	if (not slice_spec or not pid):
-		print "Not started: %s"%slice_name
-		exit(1)
+        if (not slice_spec or not pid):
+            print "lxcsu: domain not started: %s"%slice_name
+            exit(1)
 
-	if arch is None:
-		arch = 'x86_64'
+        if arch is None:
+            arch = 'x86_64'
 
-	# Set sysctls specific to slice
-	sysctls = []
-	sysctl_dir = '/etc/planetlab/vsys-attributes/%s'%slice_name
-	if (os.access(sysctl_dir,0)):
-		entries = os.listdir(sysctl_dir)
-		for e in entries:
-			prefix = 'vsys_sysctl.'
-			if (e.startswith(prefix)):
-				sysctl_file = '/'.join([sysctl_dir,e])
-				sysctl_name = e[len(prefix):]
-				sysctl_val = open(sysctl_file).read()
-				sysctls.append((sysctl_file, sysctl_name, sysctl_val))
+        # Set sysctls specific to slice
+        sysctls = []
+        sysctl_dir = '/etc/planetlab/vsys-attributes/%s'%slice_name
+        if (os.access(sysctl_dir,0)):
+            entries = os.listdir(sysctl_dir)
+            for e in entries:
+                prefix = 'vsys_sysctl.'
+                if (e.startswith(prefix)):
+                    sysctl_file = '/'.join([sysctl_dir,e])
+                    sysctl_name = e[len(prefix):]
+                    sysctl_val = open(sysctl_file).read()
+                    sysctls.append((sysctl_file, sysctl_name, sysctl_val))
 
-	# Enter cgroups
-	try:
-		for subsystem in ['cpuset','memory','blkio']:
-			open('/sys/fs/cgroup/%s/libvirt/lxc/%s/tasks'%(subsystem,slice_name),'w').write(str(os.getpid()))
+        # Enter cgroups
+        try:
+            for subsystem in ['cpuset','memory','blkio']:
+                open('/sys/fs/cgroup/%s/libvirt/lxc/%s/tasks'%(subsystem,slice_name),'w').write(str(os.getpid()))
 
-	except:
-		print "Error assigning resources: %s"%slice_name
-		exit(1)
+        except:
+            print "Error assigning resources: %s"%slice_name
+            exit(1)
 
-	try:
-		open('/sys/fs/cgroup/cpuacct/system/libvirtd.service/libvirt/lxc/%s/tasks'%slice_name,'w').write(str(os.getpid()))
-	except:
-		print "Error assigning cpuacct: %s" % slice_name
-		exit(1)
+        try:
+            open('/sys/fs/cgroup/cpuacct/system/libvirtd.service/libvirt/lxc/%s/tasks'%slice_name,'w').write(str(os.getpid()))
+        except:
+            print "Error assigning cpuacct: %s" % slice_name
+            exit(1)
 
-	# If the slice is frozen, then we'll get an EBUSY when trying to write to the task
-	# list for the freezer cgroup. Since the user couldn't do anything anyway, it's best
-	# in this case to error out the shell. (an alternative would be to un-freeze it,
-	# add the task, and re-freeze it)
-	try:
-		f=open('/sys/fs/cgroup/freezer/libvirt/lxc/%s/tasks'%(slice_name),'w')
-		f.write(str(os.getpid()))
-		# note: we need to call f.close() explicitly, or we'll get an exception in
-		# the object destructor, which will not be caught
-		f.close()
-	except:
-		print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
-		exit(1)
+        # If the slice is frozen, then we'll get an EBUSY when trying to write to the task
+        # list for the freezer cgroup. Since the user couldn't do anything anyway, it's best
+        # in this case to error out the shell. (an alternative would be to un-freeze it,
+        # add the task, and re-freeze it)
+        try:
+            f=open('/sys/fs/cgroup/freezer/libvirt/lxc/%s/tasks'%(slice_name),'w')
+            f.write(str(os.getpid()))
+            # note: we need to call f.close() explicitly, or we'll get an exception in
+            # the object destructor, which will not be caught
+            f.close()
+        except:
+            print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
+            exit(1)
 
-	setns.chcontext('/proc/%s/ns/uts'%pid)
-	setns.chcontext('/proc/%s/ns/ipc'%pid)
-	
-	if (not args.pidns):
-		setns.chcontext('/proc/%s/ns/pid'%pid)
+        setns.chcontext('/proc/%s/ns/uts'%pid)
+        setns.chcontext('/proc/%s/ns/ipc'%pid)
+        
+        if (not args.pidns):
+            setns.chcontext('/proc/%s/ns/pid'%pid)
 
-	if (not args.netns):
-		setns.chcontext('/proc/%s/ns/net'%pid)
+        if (not args.netns):
+            setns.chcontext('/proc/%s/ns/net'%pid)
 
-	if (not args.mntns):
-		setns.chcontext('/proc/%s/ns/mnt'%pid)
+        if (not args.mntns):
+            setns.chcontext('/proc/%s/ns/mnt'%pid)
 
-	proc_mounted = False
-	if (not os.access('/proc/self',0)):
-		proc_mounted = True
-		setns.proc_mount()
+        proc_mounted = False
+        if (not os.access('/proc/self',0)):
+            proc_mounted = True
+            setns.proc_mount()
 
-	for (sysctl_file, sysctl_name, sysctl_val) in sysctls:
-				for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
-					if os.path.exists(fn):
-						os.system('%s -w %s=%s  >/dev/null 2>&1'%(fn, sysctl_name,sysctl_val))
-						break
-				else:
-					print "Error: image does not have a sysctl binary"
+        for (sysctl_file, sysctl_name, sysctl_val) in sysctls:
+            for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
+                if os.path.exists(fn):
+                    os.system('%s -w %s=%s  >/dev/null 2>&1'%(fn, sysctl_name,sysctl_val))
+                    break
+                else:
+                    print "Error: image does not have a sysctl binary"
 
-	# cgroups is not yet LXC-safe, so we need to use the coarse grained access control
-	# strategy of unmounting the filesystem
+        # cgroups is not yet LXC-safe, so we need to use the coarse grained access control
+        # strategy of unmounting the filesystem
 
-	umount_result = True
-	for subsystem in ['cpuset','cpu,cpuacct','memory','devices','freezer','net_cls','blkio','perf_event','systemd']:
-		fs_path = '/sys/fs/cgroup/%s'%subsystem
-		if (not umount(fs_path,'-l')):
-			pass
-			# Leaving these comments for historical reference
-			#print "Error disabling cgroup access"
-			#exit(1) - Don't need this because failure here implies failure in the call to umount /sys/fs/cgroup
+        umount_result = True
+        for subsystem in ['cpuset','cpu,cpuacct','memory','devices','freezer','net_cls','blkio','perf_event','systemd']:
+            fs_path = '/sys/fs/cgroup/%s'%subsystem
+            if (not umount(fs_path,'-l')):
+                pass
+            # Leaving these comments for historical reference
+                        #print "Error disabling cgroup access"
+                        #exit(1) - Don't need this because failure here implies failure in the call to umount /sys/fs/cgroup
 
-	if (not umount('/sys/fs/cgroup')):
-		print "Error disabling cgroup access"
-		exit(1)
+        if (not umount('/sys/fs/cgroup')):
+            print "Error disabling cgroup access"
+            exit(1)
 
-	pid = os.fork()
+        pid = os.fork()
 
-	# capsh has a --user option starting with f14
-	# so if only for f12 we need to fake this one
-	#
-	# capsh.c does essentially the following when invoked with --user:
-	#		pwd = getpwnam(user); ...
-	#		ngroups = MAX_GROUPS; 
-	#		status = getgrouplist(user, pwd->pw_gid, groups, &ngroups); ...
-	#		status = setgroups(ngroups, groups); ...
-	#		status = setgid(pwd->pw_gid); ...
-	#		status = setuid(pwd->pw_uid); ...
-	# however we cannot simulate that ourselves because if we did in this process then
-	# capsh could not be allowed to mess with caps any more
+        # capsh has a --user option starting with f14
+        # so if only for f12 we need to fake this one
+        #
+        # capsh.c does essentially the following when invoked with --user:
+        #               pwd = getpwnam(user); ...
+        #               ngroups = MAX_GROUPS; 
+        #               status = getgrouplist(user, pwd->pw_gid, groups, &ngroups); ...
+        #               status = setgroups(ngroups, groups); ...
+        #               status = setgid(pwd->pw_gid); ...
+        #               status = setuid(pwd->pw_uid); ...
+        # however we cannot simulate that ourselves because if we did in this process then
+        # capsh could not be allowed to mess with caps any more
 
-	def getuid (slicename):
-		import pwd
-		try:
-			return pwd.getpwnam(slicename).pw_uid
-		except:
-			return
+        def getuid (slicename):
+            import pwd
+            try:
+                return pwd.getpwnam(slicename).pw_uid
+            except:
+                return
 
-	if (pid == 0):
-		cap_arg = '--drop='+drop_capabilities
+        if (pid == 0):
+            cap_arg = '--drop='+drop_capabilities
 
-		if (not args.root):
-			if (args.nosliceuid):
-				# we still want to drop capabilities, but don't want to switch UIDs
-				exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login',]+args.command_to_run
-			else:
-				uid = getuid (slice_name)
-				if not uid:
-					print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
-					exit(1)
-				exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--uid=%s'%uid,'--','--login',]+args.command_to_run
+            if (not args.root):
+                if (args.nosliceuid):
+                    # we still want to drop capabilities, but don't want to switch UIDs
+                    exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login',]+args.command_to_run
+                else:
+                    uid = getuid (slice_name)
+                    if not uid:
+                        print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
+                        exit(1)
+                        exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--uid=%s'%uid,'--','--login',]+args.command_to_run
 # once we can drop f12, it would be nicer to instead go for
-#				 exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
-		else:
-			exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
+#                                exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
+                    else:
+                        exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
 
-		os.environ['SHELL'] = '/bin/sh'
-		if os.path.exists('/etc/planetlab/lib/bind_public.so'):
-			os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
-		if not args.noslicehome:
-			os.environ['HOME'] = '/home/%s'%slice_name
-			os.chdir("/home/%s"%(slice_name))
-		if debug: print 'lxcsu:execv:','/usr/bin/setarch',exec_args
-		os.execv('/usr/bin/setarch',exec_args)
-	else:
-		setns.proc_umount()
-		_,status = os.waitpid(pid,0)
-		exit(os.WEXITSTATUS(status))
+                os.environ['SHELL'] = '/bin/sh'
+                if os.path.exists('/etc/planetlab/lib/bind_public.so'):
+                    os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
+                if not args.noslicehome:
+                    os.environ['HOME'] = '/home/%s'%slice_name
+                    os.chdir("/home/%s"%(slice_name))
+                if debug: print 'lxcsu:execv:','/usr/bin/setarch',exec_args
+                os.execv('/usr/bin/setarch',exec_args)
+        else:
+            setns.proc_umount()
+            _,status = os.waitpid(pid,0)
+            exit(os.WEXITSTATUS(status))
 
 if __name__ == '__main__':
-	main()
+    main()
