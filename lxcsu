@@ -91,6 +91,7 @@ def main ():
 		exit(1)
 
         pid = '%s'%pidnum
+	if debug: print "Found pidnum",pidnum
         cmdline = open('/proc/%s/cmdline'%pidnum).read().rstrip('\n\x00')
         arch = getarch('/proc/%s/exe'%pid)
 
@@ -119,13 +120,15 @@ def main ():
 		for subsystem in ['cpuset','memory','blkio']:
 			open('/sys/fs/cgroup/%s/libvirt/lxc/%s/tasks'%(subsystem,slice_name),'w').write(str(os.getpid()))
 
-	except:
+	except Exception,e:
+		if debug: print e 
 		print "Error assigning resources: %s"%slice_name
 		exit(1)
 
 	try:
 		open('/sys/fs/cgroup/cpuacct/system/libvirtd.service/libvirt/lxc/%s/tasks'%slice_name,'w').write(str(os.getpid()))
-	except:
+	except Exception,e:
+		if debug: print e 
 		print "Error assigning cpuacct: %s" % slice_name
 		exit(1)
 
@@ -139,7 +142,8 @@ def main ():
 		# note: we need to call f.close() explicitly, or we'll get an exception in
 		# the object destructor, which will not be caught
 		f.close()
-	except:
+	except Exception,e:
+		if debug: print e 
 		print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
 		exit(1)
 
