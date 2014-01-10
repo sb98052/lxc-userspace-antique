@@ -84,7 +84,7 @@ def main ():
 		debug=True
 
 	try:
-		cmd = '/usr/bin/virsh domid %s'%slice_name
+		cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
 		pidnum = int(os.popen(cmd).read().rstrip())
 	except:
 		print "Error finding slice %s"%slice_name
