@@ -84,43 +84,17 @@ def main ():
 		debug=True
 
 	try:
-		cmd = 'grep %s /proc/*/cgroup | grep freezer'%slice_name
-		output = os.popen(cmd).readlines()
+		cmd = '/usr/bin/virsh domid %s'%slice_name
+		pidnum = int(os.popen(cmd).read().rstrip())
 	except:
 		print "Error finding slice %s"%slice_name
 		exit(1)
 
-	slice_spec = None
+        pid = '%s'%pidnum
+        cmdline = open('/proc/%s/cmdline'%pidnum).read().rstrip('\n\x00')
+        arch = getarch('/proc/%s/exe'%pid)
 
-	# provide a default as this is not always properly computed
-	arch = None
-
-	for e in output:
-		try:
-			l = e.rstrip()
-			path = l.split(':')[0]	
-			comp = l.rsplit(':')[-1]
-			slice_name_check = comp.rsplit('/')[-1]
-			if debug: print "dealing with >%s<"%slice_name_check
-			
-			if (slice_name_check == slice_name):
-				if debug: print "found %s"%slice_name
-				slice_path = path
-				pid = slice_path.split('/')[2]
-				cmdline = open('/proc/%s/cmdline'%pid).read().rstrip('\n\x00')
-				if (cmdline == '/sbin/init') or (cmdline.startswith("init [")):
-					slice_spec = slice_path
-					arch = getarch('/proc/%s/exe'%pid)
-					break
-		except Exception,e:
-			if debug: 
-				import traceback
-				print "BEG lxcsu - ignoring exception"
-				traceback.print_exc()
-				print "END lxcsu - ignoring exception"
-			pass
-
-	if (not slice_spec or not pid):
+	if (not pid):
 		print "Not started: %s"%slice_name
 		exit(1)
 
