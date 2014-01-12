@@ -112,6 +112,7 @@ def virSystemdMakeScopeName (name, drivername, partition):
 #98}
 
 ### our own additions
+# heuristics to locate /sys/fs/cgroup stuff
 import os.path
 def find_first_dir (candidates):
     for candidate in candidates:
@@ -126,6 +127,7 @@ def find_sysfs_scope (subsystem, slice_name):
     candidates = [ 
         # for f16 and our locally brewed libvirt 1.0.4
         "/sys/fs/cgroup/%s/libvirt/lxc/%s"%(subsystem1, slice_name),
+        "/sys/fs/cgroup/%s/system/libvirtd.service/libvirt/lxc/%s"%(subsystem1, slice_name),
         # f20 and libvirt 1.1.3
         "/sys/fs/cgroup/%s/machine.slice/%s"%(subsystem2, 
                                               virSystemdMakeScopeName(slice_name,'lxc','machine')),
@@ -210,7 +212,7 @@ def main ():
         cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
 	pidnum = int(os.popen(cmd).read().rstrip())
     except:
-        print "Error finding slice %s"%slice_name
+        print "Error finding slice %s in virsh"%slice_name
 	exit(1)
 
     pid = '%s'%pidnum
