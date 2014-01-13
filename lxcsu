@@ -117,7 +117,7 @@ import os.path
 def find_first_dir (candidates):
     for candidate in candidates:
         if os.path.isdir(candidate): return candidate
-    raise Exception,"Cannot find valid dir among %s"%'\n'.join(candidates)
+    raise Exception,"Cannot find valid dir among\n" + "\n".join([" ->"+c for c in candidates])
 
 def find_sysfs_scope (subsystem, slice_name):
     subsystem1=subsystem
@@ -212,7 +212,7 @@ def main ():
         cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
 	pidnum = int(os.popen(cmd).read().rstrip())
     except:
-        print "Error finding slice %s in virsh"%slice_name
+        print "Domain %s not found"%slice_name
 	exit(1)
 
     pid = '%s'%pidnum
@@ -221,7 +221,7 @@ def main ():
     arch = getarch('/proc/%s/exe'%pid)
 
     if (not pid):
-        print "Not started: %s"%slice_name
+        print "Domain %s not started"%slice_name
 	exit(1)
 
     if arch is None:
@@ -241,21 +241,16 @@ def main ():
 		sysctls.append((sysctl_file, sysctl_name, sysctl_val))
 
     # Enter cgroups
-    try:
-	for subsystem in ['cpuset','memory','blkio']:
+    # do not exit right away when something goes wrong
+    # check as much as we can and only then exit
+    cgroups_ok=True
+    for subsystem in ['cpuset' ,'memory' ,'blkio', 'cpuacct']:
+        try:
             open( find_sysfs_scope (subsystem, slice_name)+"/tasks", 'w').write(str(os.getpid()))
-
-    except Exception,e:
-	if debug: print e 
-	print "Error assigning resources: %s"%slice_name
-	exit(1)
-
-    try:
-        open ( find_sysfs_scope ('cpuacct', slice_name)+"/tasks", 'w').write(str(os.getpid()))
-    except Exception,e:
-	if debug: print e 
-	print "Error assigning cpuacct: %s" % slice_name
-	exit(1)
+        except Exception,e:
+            if debug: print e 
+            print "ERROR assigning resources for %s in subsystem %s - bailing out"%(slice_name,subsystem)
+            cgroups_ok=False
 
     # If the slice is frozen, then we'll get an EBUSY when trying to write to the task
     # list for the freezer cgroup. Since the user couldn't do anything anyway, it's best
@@ -270,7 +265,7 @@ def main ():
     except Exception,e:
 	if debug: print e 
 	print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
-	exit(1)
+        cgroups_ok=False
 
     setns.chcontext('/proc/%s/ns/uts'%pid)
     setns.chcontext('/proc/%s/ns/ipc'%pid)
@@ -311,6 +306,10 @@ def main ():
 
     if (not umount('/sys/fs/cgroup')):
         print "Error disabling cgroup access"
+        cgroups_ok=False
+
+    if not cgroups_ok:
+        print 'exiting'
         exit(1)
 
     pid = os.fork()
