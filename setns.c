@@ -5,6 +5,25 @@
 #include <sys/mount.h>
 
 static PyObject *
+proc_mount(PyObject *self, PyObject *args)
+{
+    int sts; 
+    sts = mount("none","/proc","proc",0,NULL);
+
+    return Py_BuildValue("i", sts);
+}
+
+static PyObject *
+proc_umount(PyObject *self, PyObject *args)
+{
+    int sts; 
+    sts = umount("/proc");
+
+    return Py_BuildValue("i", sts);
+
+}
+
+static PyObject *
 chfscontext(PyObject *self, PyObject *args)
 {
     const char *filepath;
@@ -26,25 +45,6 @@ chfscontext(PyObject *self, PyObject *args)
 
 out:
     return Py_BuildValue("i", sts);
-}
-
-static PyObject *
-proc_mount(PyObject *self, PyObject *args)
-{
-    int sts; 
-    sts = mount("none","/proc","proc",0,NULL);
-
-    return Py_BuildValue("i", sts);
-}
-
-static PyObject *
-proc_umount(PyObject *self, PyObject *args)
-{
-    int sts; 
-    sts = umount("/proc");
-
-    return Py_BuildValue("i", sts);
-
 }
 
 static PyObject *
