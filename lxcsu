@@ -178,17 +178,23 @@ def main ():
                 exit(1)
 
 
-    setns.chcontext('/proc/%s/ns/uts'%pid)
-    setns.chcontext('/proc/%s/ns/ipc'%pid)
+    def chcontext (path):
+        retcod = setns.chcontext (path)
+        if retcod != 0:
+            print 'WARNING - setns(%s)=>%s (ignored)'%(path,retcod)
+        return retcod
+
+    chcontext('/proc/%s/ns/uts'%pid)
+    chcontext('/proc/%s/ns/ipc'%pid)
 	
     if (not args.pidns):
-	setns.chcontext('/proc/%s/ns/pid'%pid)
+	chcontext('/proc/%s/ns/pid'%pid)
 
     if (not args.netns):
-	setns.chcontext('/proc/%s/ns/net'%pid)
+	chcontext('/proc/%s/ns/net'%pid)
 
     if (not args.mntns):
-	setns.chcontext('/proc/%s/ns/mnt'%pid)
+	chcontext('/proc/%s/ns/mnt'%pid)
 
     proc_mounted = False
     if (not os.access('/proc/self',0)):
@@ -210,6 +216,7 @@ def main ():
     for subsystem in ['cpuset','cpu,cpuacct','memory','devices','freezer','net_cls','blkio','perf_event','systemd']:
 	fs_path = '/sys/fs/cgroup/%s'%subsystem
 	if (not umount(fs_path,'-l')):
+            print 'WARNING - umount failed (ignored) with path=',fs_path
 	    pass
 	    # Leaving these comments for historical reference
 	    #print "Error disabling cgroup access"
