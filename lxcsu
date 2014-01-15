@@ -117,7 +117,7 @@ import os.path
 def find_first_dir (candidates):
     for candidate in candidates:
         if os.path.isdir(candidate): return candidate
-    raise Exception,"Cannot find valid dir among %s"%'\n'.join(candidates)
+    raise Exception,"Cannot find valid dir among\n" + "\n".join([" ->"+c for c in candidates])
 
 def find_sysfs_scope (subsystem, slice_name):
     subsystem1=subsystem
@@ -227,7 +227,7 @@ def main ():
         cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
 	pidnum = int(os.popen(cmd).read().rstrip())
     except:
-        print "Error finding slice %s"%slice_name
+        print "Domain %s not found"%slice_name
 	exit(1)
 
     pid = '%s'%pidnum
@@ -236,7 +236,7 @@ def main ():
     arch = getarch('/proc/%s/exe'%pid)
 
     if (not pid):
-        print "Not started: %s"%slice_name
+        print "Domain %s not started"%slice_name
 	exit(1)
 
     if arch is None:
