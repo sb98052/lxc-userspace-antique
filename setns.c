@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <asm/unistd.h>
 #include <sys/mount.h>
+#include <errno.h>
 
 static PyObject *
 proc_mount(PyObject *self, PyObject *args)
@@ -20,7 +21,6 @@ proc_umount(PyObject *self, PyObject *args)
     sts = umount("/proc");
 
     return Py_BuildValue("i", sts);
-
 }
 
 static PyObject *
@@ -34,14 +34,15 @@ chfscontext(PyObject *self, PyObject *args)
 
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
-        sts = -1;
+        sts = -errno;
         goto out;
     }
     
     if (setns(fd, 0)) {
-        sts = -1;
+        sts = -errno;
     }
     close(fd);
+    sts = 0;
 
 out:
     return Py_BuildValue("i", sts);
@@ -58,14 +59,15 @@ chcontext(PyObject *self, PyObject *args)
 
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
-        sts = -1;
+        sts = -errno;
         goto out;
     }
     
     if (setns(fd, 0)) {
-        sts = -1;
+        sts = -errno;
     }
     close(fd);
+    sts = 0;
 
 out:
     return Py_BuildValue("i", sts);
