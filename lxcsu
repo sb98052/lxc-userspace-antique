@@ -3,6 +3,7 @@
 import sys
 import os
 import setns
+import pdb
 
 from argparse import ArgumentParser
 
@@ -146,6 +147,22 @@ def getarch(f):
     else:
         raise Exception('Could not determine architecture')
 
+def get_cgroup_subdirs_for_pid(pid):
+    cgroup_info_file = '/proc/%s/cgroup'%pid
+    cgroup_lines = open(cgroup_info_file).read().splitlines()
+    
+    subdirs = {}
+    for line in cgroup_lines:
+        try:
+            _, cgroup_name, subdir = line.split(':')
+            subdirs[cgroup_name] = subdir
+        except Exception, e:
+            print "Error reading cgroup info: %s"%str(e)
+            pass
+    
+    return subdirs
+        
+    
 def umount(fs_dir, opts=''):
     output = os.popen('/bin/umount %s %s 2>&1'%(opts, fs_dir)).read()
     return ('device is busy' not in output)
@@ -238,37 +255,51 @@ def main ():
 		sysctl_val = open(sysctl_file).read()
 		sysctls.append((sysctl_file, sysctl_name, sysctl_val))
 
-    # Enter cgroups
-    try:
-	for subsystem in ['cpuset','memory','blkio']:
-            open( find_sysfs_scope (subsystem, slice_name)+"/tasks", 'w').write(str(os.getpid()))
-
-    except Exception,e:
-	if debug: print e 
-	print "Error assigning resources: %s"%slice_name
-	exit(1)
-
-    try:
-        open ( find_sysfs_scope ('cpuacct', slice_name)+"/tasks", 'w').write(str(os.getpid()))
-    except Exception,e:
-	if debug: print e 
-	print "Error assigning cpuacct: %s" % slice_name
-	exit(1)
+    subdirs = get_cgroup_subdirs_for_pid(pid) 
+    sysfs_root = '/sys/fs/cgroup'
 
     # If the slice is frozen, then we'll get an EBUSY when trying to write to the task
     # list for the freezer cgroup. Since the user couldn't do anything anyway, it's best
     # in this case to error out the shell. (an alternative would be to un-freeze it,
     # add the task, and re-freeze it)
-    try:
-	f=open( find_sysfs_scope ('freezer', slice_name)+"/tasks", 'w')
-	f.write(str(os.getpid()))
-	# note: we need to call f.close() explicitly, or we'll get an exception in
-	# the object destructor, which will not be caught
-	f.close()
-    except Exception,e:
-	if debug: print e 
-	print "Error adding task to freezer cgroup. Slice is probably frozen: %s" % slice_name
-	exit(1)
+    # Enter cgroups
+    current_cgroup = ''
+    for subsystem in ['cpuset','memory','blkio','cpuacct','cpuacct,cpu','freezer']:
+        try:
+            current_cgroup = subsystem
+
+            # There seems to be a bug in the cgroup schema: cpuacct,cpu can become cpu,cpuacct
+            # We need to handle both
+            task_path_alt = None
+            try:
+               subsystem_comps = subsystem.split(',')
+               subsystem_comps.reverse()
+               subsystem_alt = ','.join(subsystem_comps)
+               tasks_path_alt = [sysfs_root, subsystem_alt, subdirs[subsystem], 'tasks']
+            except Exception,e:
+                pass
+               
+            tasks_path = [sysfs_root,subsystem,subdirs[subsystem],'tasks']
+            tasks_path_str = '/'.join(tasks_path)
+     
+            try:
+                f = open(tasks_path_str, 'w')
+            except:
+                tasks_path_alt_str = '/'.join(tasks_path_alt)
+                f = open(tasks_path_alt_str, 'w')
+
+            f.write(str(os.getpid()))
+            if (subsystem=='freezer'):
+                f.close()
+
+        except Exception,e:
+            if (not subdirs.has_key(subsystem)):
+                pass
+            else:
+                if debug: print e 
+                print "Error assigning cgroup %s (%s) for slice %s"%(current_cgroup,pid, slice_name)
+                exit(1)
+
 
     setns.chcontext('/proc/%s/ns/uts'%pid)
     setns.chcontext('/proc/%s/ns/ipc'%pid)
