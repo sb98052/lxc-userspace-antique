@@ -19,7 +19,7 @@ setns: setns.c
 # $ export NODE=vnode01.pl.sophia.inria.fr
 # and then just run
 # $ make sync
-# this will attempt to compile vsh from vsh.c (and will push Makefile.vsh in /usr/sbin/)
+# this will attempt to compile vsh from vsh.c
 # so you might have to yum install gcc
 
 LOCAL_RSYNC_EXCLUDES	:= --exclude '*.pyc' 
@@ -37,10 +37,12 @@ ifeq (,$(NODEURL))
 	@echo "  e.g. make sync NODE=vnode01.inria.fr"
 	@exit 1
 else
-	+$(RSYNC) ./lxcsu ./lxcsu-internal ./vsh.c ./Makefile.vsh $(NODEURL)/usr/sbin/
-	ssh -i $(NODE).key.rsa root@$(NODE) make -C /usr/sbin -f Makefile.vsh vsh
-	ssh -i $(NODE).key.rsa root@$(NODE) chown root:root /usr/sbin/lxcsu /usr/sbin/vsh
-	ssh -i $(NODE).key.rsa root@$(NODE) chmod u+s /usr/sbin/lxcsu /usr/sbin/vsh
+	+$(RSYNC) ./lxcsu ./lxcsu-internal ./vsh.c $(NODEURL)/usr/sbin/
+	ssh -i $(NODE).key.rsa root@$(NODE) chown root:root /usr/sbin/lxcsu
+	ssh -i $(NODE).key.rsa root@$(NODE) chmod u+s /usr/sbin/lxcsu
+	ssh -i $(NODE).key.rsa root@$(NODE) gcc -o /usr/sbin/vsh /usr/sbin/vsh.c
+	ssh -i $(NODE).key.rsa root@$(NODE) chown root:root /usr/sbin/vsh
+	ssh -i $(NODE).key.rsa root@$(NODE) chmod u+s /usr/sbin/vsh
 endif
 
 ### fetching the key
