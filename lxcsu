@@ -47,13 +47,13 @@ def umount(fs_dir, opts=''):
 def main ():
     parser = ArgumentParser()
     parser.add_argument("-n", "--nonet",
-					action="store_true", dest="netns", default=False,
+					action="store_true", dest="no_netns", default=False,
 					help="Don't enter network namespace")
     parser.add_argument("-m", "--nomnt",
-					action="store_true", dest="mntns", default=False,
+					action="store_true", dest="no_mntns", default=False,
 					help="Don't enter mount namespace")
     parser.add_argument("-p", "--nopid",
-					action="store_true", dest="pidns", default=False,
+					action="store_true", dest="no_pidns", default=False,
 					help="Don't enter pid namespace")
     parser.add_argument("-r", "--root",
 					action="store_true", dest="root", default=False,
@@ -102,25 +102,26 @@ def main ():
 
     try:
         cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
-	pidnum = int(os.popen(cmd).read().rstrip())
+        # convert to int as a minimal raincheck
+	driver_pid = int(os.popen(cmd).read().strip())
         # locate the pid for the - expected - single child, that would be the init for that VM
-        child_pid = open("/proc/%s/task/%s/children"%(pidnum,pidnum)).read().strip()
+        init_pid = int(open("/proc/%s/task/%s/children"%(driver_pid,driver_pid)).read().strip())
+        # Thierry: I am changing the code below to use child_pid instead of driver_pid
+        # for the namespace handling features, that I was able to check
+        # I've left the other ones as they were, i.e. using driver_pid, but I suspect
+        # they chould be changed as well
 
     except:
         print "Domain %s not found"%slice_name
 	exit(1)
 
-    pid = '%s'%pidnum
-    if debug: print "Found pidnum",pidnum,'child_pid=',child_pid
-    cmdline = open('/proc/%s/cmdline'%pidnum).read().rstrip('\n\x00')
-    arch = getarch('/proc/%s/exe'%pid)
-
-    if (not pid):
+    if not driver_pid or not init_pid:
         print "Domain %s not started"%slice_name
 	exit(1)
 
-    if arch is None:
-	arch = 'x86_64'
+    if debug: print "Found driver_pid",driver_pid,'and init_pid=',init_pid
+    # xxx probably init_pid here too
+    arch = getarch('/proc/%s/exe'%driver_pid)
 
     # Set sysctls specific to slice
     sysctls = []
@@ -135,7 +136,8 @@ def main ():
 		sysctl_val = open(sysctl_file).read()
 		sysctls.append((sysctl_file, sysctl_name, sysctl_val))
 
-    subdirs = get_cgroup_subdirs_for_pid(pid) 
+    # xxx probably init_pid here too
+    subdirs = get_cgroup_subdirs_for_pid(driver_pid) 
     sysfs_root = '/sys/fs/cgroup'
 
     # If the slice is frozen, then we'll get an EBUSY when trying to write to the task
@@ -177,7 +179,7 @@ def main ():
                 pass
             else:
                 if debug: print e 
-                print "Error assigning cgroup %s (%s) for slice %s"%(current_cgroup,pid, slice_name)
+                print "Error assigning cgroup %s (pid=%s) for slice %s"%(current_cgroup,driver_pid, slice_name)
                 exit(1)
 
 
@@ -187,19 +189,15 @@ def main ():
             print 'WARNING - setns(%s)=>%s (ignored)'%(path,retcod)
         return retcod
 
-    # Use child_pid and not pid to locate reference namespaces
-    ref_ns = "/proc/%s/ns/"%child_pid
-    chcontext(ref_ns+'uts')
-    chcontext(ref_ns+'ipc')
+    # Use init_pid and not driver_pid to locate reference namespaces
+    ref_ns = "/proc/%s/ns/"%init_pid
+
+    if True:                    chcontext(ref_ns+'uts')
+    if True:                    chcontext(ref_ns+'ipc')
 	
-    if (not args.pidns):
-	chcontext(ref_ns+'pid')
-
-    if (not args.netns):
-	chcontext(ref_ns+'net')
-
-    if (not args.mntns):
-	chcontext(ref_ns+'mnt')
+    if (not args.no_pidns):     chcontext(ref_ns+'pid')
+    if (not args.no_netns):     chcontext(ref_ns+'net')
+    if (not args.no_mntns):     chcontext(ref_ns+'mnt')
 
     proc_mounted = False
     if (not os.access('/proc/self',0)):
@@ -231,7 +229,7 @@ def main ():
         print "Error disabling cgroup access"
         exit(1)
 
-    pid = os.fork()
+    fork_pid = os.fork()
 
     # capsh has a --user option starting with f14
     # so if only for f12 we need to fake this one
@@ -253,7 +251,7 @@ def main ():
         except:
             return
 
-    if (pid == 0):
+    if (fork_pid == 0):
         cap_arg = '--drop='+drop_capabilities
 
         if (not args.root):
@@ -281,7 +279,7 @@ def main ():
         os.execv('/usr/bin/setarch',exec_args)
     else:
         setns.proc_umount()
-        _,status = os.waitpid(pid,0)
+        _,status = os.waitpid(fork_pid,0)
         exit(os.WEXITSTATUS(status))
 
 if __name__ == '__main__':
