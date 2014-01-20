@@ -103,12 +103,15 @@ def main ():
     try:
         cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
 	pidnum = int(os.popen(cmd).read().rstrip())
+        # locate the pid for the - expected - single child, that would be the init for that VM
+        child_pid = open("/proc/%s/task/%s/children"%(pidnum,pidnum)).read().strip()
+
     except:
         print "Domain %s not found"%slice_name
 	exit(1)
 
     pid = '%s'%pidnum
-    if debug: print "Found pidnum",pidnum
+    if debug: print "Found pidnum",pidnum,'child_pid=',child_pid
     cmdline = open('/proc/%s/cmdline'%pidnum).read().rstrip('\n\x00')
     arch = getarch('/proc/%s/exe'%pid)
 
@@ -184,17 +187,19 @@ def main ():
             print 'WARNING - setns(%s)=>%s (ignored)'%(path,retcod)
         return retcod
 
-    chcontext('/proc/%s/ns/uts'%pid)
-    chcontext('/proc/%s/ns/ipc'%pid)
+    # Use child_pid and not pid to locate reference namespaces
+    ref_ns = "/proc/%s/ns/"%child_pid
+    chcontext(ref_ns+'uts')
+    chcontext(ref_ns+'ipc')
 	
     if (not args.pidns):
-	chcontext('/proc/%s/ns/pid'%pid)
+	chcontext(ref_ns+'pid')
 
     if (not args.netns):
-	chcontext('/proc/%s/ns/net'%pid)
+	chcontext(ref_ns+'net')
 
     if (not args.mntns):
-	chcontext('/proc/%s/ns/mnt'%pid)
+	chcontext(ref_ns+'mnt')
 
     proc_mounted = False
     if (not os.access('/proc/self',0)):
