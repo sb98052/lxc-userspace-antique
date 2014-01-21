@@ -105,7 +105,8 @@ def main ():
         # convert to int as a minimal raincheck
 	driver_pid = int(os.popen(cmd).read().strip())
         # locate the pid for the - expected - single child, that would be the init for that VM
-        init_pid = int(open("/proc/%s/task/%s/children"%(driver_pid,driver_pid)).read().strip())
+        #init_pid = int(open("/proc/%s/task/%s/children"%(driver_pid,driver_pid)).read().strip())
+	init_pid = int(os.popen('pgrep -P %s'%driver_pid).readlines()[0].strip())
         # Thierry: I am changing the code below to use child_pid instead of driver_pid
         # for the namespace handling features, that I was able to check
         # I've left the other ones as they were, i.e. using driver_pid, but I suspect
