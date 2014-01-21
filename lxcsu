@@ -47,29 +47,29 @@ def umount(fs_dir, opts=''):
 def main ():
     parser = ArgumentParser()
     parser.add_argument("-n", "--nonet",
-                    action="store_true", dest="no_netns", default=False,
-                    help="Don't enter network namespace")
+					action="store_true", dest="no_netns", default=False,
+					help="Don't enter network namespace")
     parser.add_argument("-m", "--nomnt",
-                    action="store_true", dest="no_mntns", default=False,
-                    help="Don't enter mount namespace")
+					action="store_true", dest="no_mntns", default=False,
+					help="Don't enter mount namespace")
     parser.add_argument("-p", "--nopid",
-                    action="store_true", dest="no_pidns", default=False,
-                    help="Don't enter pid namespace")
+					action="store_true", dest="no_pidns", default=False,
+					help="Don't enter pid namespace")
     parser.add_argument("-r", "--root",
-                    action="store_true", dest="root", default=False,
-                    help="Enter as root: be careful")
+					action="store_true", dest="root", default=False,
+					help="Enter as root: be careful")
     parser.add_argument("-i","--internal",
-                    action="store_true", dest="internal", default=False,
-                    help="does *not* prepend '-- -c' to arguments - or invoke lxcsu-internal")
+					action="store_true", dest="internal", default=False,
+					help="does *not* prepend '-- -c' to arguments - or invoke lxcsu-internal")
     parser.add_argument("-d","--debug",
-                    action='store_true', dest='debug', default=False,
-                    help="debug option")
+					action='store_true', dest='debug', default=False,
+					help="debug option")
     parser.add_argument("-s","--nosliceuid",
-                    action='store_true', dest="nosliceuid", default=False,
-                    help="do not change to slice uid inside of slice")
+					action='store_true', dest="nosliceuid", default=False,
+					help="do not change to slice uid inside of slice")
     parser.add_argument("-o","--noslicehome",
-                    action='store_true', dest="noslicehome", default=False,
-                    help="do not change to slice home directory inside of slice")
+					action='store_true', dest="noslicehome", default=False,
+					help="do not change to slice home directory inside of slice")
 
     if os.path.exists("/etc/lxcsu_default"):
         defaults = parser.parse_args(file("/etc/lxcsu_default","r").read().split())
@@ -91,22 +91,21 @@ def main ():
 
     # plain lxcsu
     if not args.internal:
-    # no command given: enter interactive shell
-    if not args.command_to_run: args.command_to_run=['/bin/sh']
-    args.command_to_run = [ '-c' ] + [" ".join(args.command_to_run)]
+	# no command given: enter interactive shell
+	if not args.command_to_run: args.command_to_run=['/bin/sh']
+	args.command_to_run = [ '-c' ] + [" ".join(args.command_to_run)]
 
     # support for either setting debug at the top of this file, or on the command-line
     if args.debug:
         global debug
-    debug=True
+	debug=True
 
     try:
         cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
         # convert to int as a minimal raincheck
-    driver_pid = int(os.popen(cmd).read().strip())
+	driver_pid = int(os.popen(cmd).read().strip())
         # locate the pid for the - expected - single child, that would be the init for that VM
-        #init_pid = int(open("/proc/%s/task/%s/children"%(driver_pid,driver_pid)).read().strip())
-        init_pid = int(os.popen('pgrep -P %s'%driver_pid).readlines()[0].strip())
+        init_pid = int(open("/proc/%s/task/%s/children"%(driver_pid,driver_pid)).read().strip())
         # Thierry: I am changing the code below to use child_pid instead of driver_pid
         # for the namespace handling features, that I was able to check
         # I've left the other ones as they were, i.e. using driver_pid, but I suspect
@@ -114,11 +113,11 @@ def main ():
 
     except:
         print "Domain %s not found"%slice_name
-    exit(1)
+	exit(1)
 
     if not driver_pid or not init_pid:
         print "Domain %s not started"%slice_name
-    exit(1)
+	exit(1)
 
     if debug: print "Found driver_pid",driver_pid,'and init_pid=',init_pid
     # xxx probably init_pid here too
@@ -129,13 +128,13 @@ def main ():
     sysctl_dir = '/etc/planetlab/vsys-attributes/%s'%slice_name
     if (os.access(sysctl_dir,0)):
         entries = os.listdir(sysctl_dir)
-    for e in entries:
+	for e in entries:
             prefix = 'vsys_sysctl.'
-        if (e.startswith(prefix)):
-        sysctl_file = '/'.join([sysctl_dir,e])
-        sysctl_name = e[len(prefix):]
-        sysctl_val = open(sysctl_file).read()
-        sysctls.append((sysctl_file, sysctl_name, sysctl_val))
+	    if (e.startswith(prefix)):
+		sysctl_file = '/'.join([sysctl_dir,e])
+		sysctl_name = e[len(prefix):]
+		sysctl_val = open(sysctl_file).read()
+		sysctls.append((sysctl_file, sysctl_name, sysctl_val))
 
     # xxx probably init_pid here too
     subdirs = get_cgroup_subdirs_for_pid(driver_pid) 
@@ -195,36 +194,36 @@ def main ():
 
     if True:                    chcontext(ref_ns+'uts')
     if True:                    chcontext(ref_ns+'ipc')
-    
+	
     if (not args.no_pidns):     chcontext(ref_ns+'pid')
     if (not args.no_netns):     chcontext(ref_ns+'net')
     if (not args.no_mntns):     chcontext(ref_ns+'mnt')
 
     proc_mounted = False
     if (not os.access('/proc/self',0)):
-    proc_mounted = True
-    setns.proc_mount()
+	proc_mounted = True
+	setns.proc_mount()
 
     for (sysctl_file, sysctl_name, sysctl_val) in sysctls:
-    for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
-        if os.path.exists(fn):
-        os.system('%s -w %s=%s  >/dev/null 2>&1'%(fn, sysctl_name,sysctl_val))
-        break
-        else:
-        print "Error: image does not have a sysctl binary"
+	for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
+	    if os.path.exists(fn):
+		os.system('%s -w %s=%s  >/dev/null 2>&1'%(fn, sysctl_name,sysctl_val))
+		break
+	    else:
+		print "Error: image does not have a sysctl binary"
 
     # cgroups is not yet LXC-safe, so we need to use the coarse grained access control
     # strategy of unmounting the filesystem
 
     umount_result = True
     for subsystem in ['cpuset','cpu,cpuacct','memory','devices','freezer','net_cls','blkio','perf_event','systemd']:
-    fs_path = '/sys/fs/cgroup/%s'%subsystem
-    if (not umount(fs_path,'-l')):
+	fs_path = '/sys/fs/cgroup/%s'%subsystem
+	if (not umount(fs_path,'-l')):
             print 'WARNING - umount failed (ignored) with path=',fs_path
-        pass
-        # Leaving these comments for historical reference
-        #print "Error disabling cgroup access"
-        #exit(1) - Don't need this because failure here implies failure in the call to umount /sys/fs/cgroup
+	    pass
+	    # Leaving these comments for historical reference
+	    #print "Error disabling cgroup access"
+	    #exit(1) - Don't need this because failure here implies failure in the call to umount /sys/fs/cgroup
 
     if (not umount('/sys/fs/cgroup')):
         print "Error disabling cgroup access"
@@ -236,12 +235,12 @@ def main ():
     # so if only for f12 we need to fake this one
     #
     # capsh.c does essentially the following when invoked with --user:
-    #       pwd = getpwnam(user); ...
-    #       ngroups = MAX_GROUPS; 
-    #       status = getgrouplist(user, pwd->pw_gid, groups, &ngroups); ...
-    #       status = setgroups(ngroups, groups); ...
-    #       status = setgid(pwd->pw_gid); ...
-    #       status = setuid(pwd->pw_uid); ...
+    #		pwd = getpwnam(user); ...
+    #		ngroups = MAX_GROUPS; 
+    #		status = getgrouplist(user, pwd->pw_gid, groups, &ngroups); ...
+    #		status = setgroups(ngroups, groups); ...
+    #		status = setgid(pwd->pw_gid); ...
+    #		status = setuid(pwd->pw_uid); ...
     # however we cannot simulate that ourselves because if we did in this process then
     # capsh could not be allowed to mess with caps any more
 
@@ -284,4 +283,4 @@ def main ():
         exit(os.WEXITSTATUS(status))
 
 if __name__ == '__main__':
-    main()
+	main()
