@@ -7,8 +7,6 @@ import pdb
 
 from argparse import ArgumentParser
 
-drop_capabilities='cap_sys_admin,cap_sys_boot,cap_sys_module'
-
 # can set to True here, but also use the -d option
 debug = False
 
@@ -232,19 +230,6 @@ def main ():
 
     fork_pid = os.fork()
 
-    # capsh has a --user option starting with f14
-    # so if only for f12 we need to fake this one
-    #
-    # capsh.c does essentially the following when invoked with --user:
-    #		pwd = getpwnam(user); ...
-    #		ngroups = MAX_GROUPS; 
-    #		status = getgrouplist(user, pwd->pw_gid, groups, &ngroups); ...
-    #		status = setgroups(ngroups, groups); ...
-    #		status = setgid(pwd->pw_gid); ...
-    #		status = setuid(pwd->pw_uid); ...
-    # however we cannot simulate that ourselves because if we did in this process then
-    # capsh could not be allowed to mess with caps any more
-
     def getuid (slicename):
         import pwd
         try:
@@ -253,22 +238,21 @@ def main ():
             return
 
     if (fork_pid == 0):
-        cap_arg = '--drop='+drop_capabilities
-
         if (not args.root):
+            setns.drop_caps() 
             if (args.nosliceuid):
                 # we still want to drop capabilities, but don't want to switch UIDs
-                exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--','--login',]+args.command_to_run
+                exec_args = [arch,'/bin/sh','--login',]+args.command_to_run
             else:
                 uid = getuid (slice_name)
                 if not uid:
                     print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
                     exit(1)
-                exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--uid=%s'%uid,'--','--login',]+args.command_to_run
+                exec_args = [arch,'/bin/sh','--uid=%s'%uid,'--login',]+args.command_to_run
 # once we can drop f12, it would be nicer to instead go for
-# exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--','--login',]+args.command_to_run
+# exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--login',]+args.command_to_run
         else:
-            exec_args = [arch,'/usr/sbin/capsh','--','--login']+args.command_to_run
+            exec_args = [arch,'/bin/sh','--login']+args.command_to_run
 
         os.environ['SHELL'] = '/bin/sh'
         if os.path.exists('/etc/planetlab/lib/bind_public.so'):
