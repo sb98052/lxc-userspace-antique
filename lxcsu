@@ -244,11 +244,13 @@ def main ():
                 # we still want to drop capabilities, but don't want to switch UIDs
                 exec_args = [arch,'/bin/sh','--login',]+args.command_to_run
             else:
+				# let's keep this check even though we don't use the uid
+				# as a way of checking the existence of the slice account
                 uid = getuid (slice_name)
                 if not uid:
                     print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
                     exit(1)
-                exec_args = [arch,'/bin/sh','--uid=%s'%uid,'--login',]+args.command_to_run
+                exec_args = [arch,'/usr/bin/sudo','-u',slice_name,'/bin/sh','--login',]+args.command_to_run
 # once we can drop f12, it would be nicer to instead go for
 # exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--login',]+args.command_to_run
         else:
