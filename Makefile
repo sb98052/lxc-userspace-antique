@@ -37,9 +37,11 @@ ifeq (,$(NODEURL))
 	@echo "  e.g. make sync NODE=vnode01.inria.fr"
 	@exit 1
 else
-	+$(RSYNC) ./lxcsu ./lxcsu-internal ./vsh.c $(NODEURL)/usr/sbin/
+	+$(RSYNC) ./slicesu ./lxcsu ./lxcsu-internal ./vsh.c $(NODEURL)/usr/sbin/
 	ssh -i $(NODE).key.rsa root@$(NODE) chown root:root /usr/sbin/lxcsu
+	ssh -i $(NODE).key.rsa root@$(NODE) chown root:root /usr/sbin/slicesu
 	ssh -i $(NODE).key.rsa root@$(NODE) chmod u+s /usr/sbin/lxcsu
+	ssh -i $(NODE).key.rsa root@$(NODE) chmod u+s /usr/sbin/slicesu
 	ssh -i $(NODE).key.rsa root@$(NODE) gcc -o /usr/sbin/vsh /usr/sbin/vsh.c
 	ssh -i $(NODE).key.rsa root@$(NODE) chown root:root /usr/sbin/vsh
 	ssh -i $(NODE).key.rsa root@$(NODE) chmod u+s /usr/sbin/vsh
@@ -72,7 +74,9 @@ install: setns vsh
 	mkdir -p /usr/sbin
 	install -D -m 755 vsh /usr/sbin/vsh
 	install -D -m 755 lxcsu /usr/sbin/lxcsu
+	install -D -m 755 slicesu /usr/sbin/slicesu
 	install -D -m 755 lxcsu-internal /usr/sbin/lxcsu-internal
 	chmod u+s /usr/sbin/lxcsu
+	chmod u+s /usr/sbin/slicesu
 	chmod u+s /usr/sbin/vsh
 	cp build/lib*/setns.so /usr/sbin
