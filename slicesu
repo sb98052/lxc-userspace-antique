@@ -1,0 +1,310 @@
+#!/usr/bin/python
+
+import sys
+import os
+import setns
+import pdb
+
+from argparse import ArgumentParser
+
+# can set to True here, but also use the -d option
+debug = False
+
+def getarch(f):
+	output = os.popen('readelf -h %s 2>&1'%f).readlines()
+	classlines = [x for x in output if ('Class' in x.split(':')[0])]
+	line = classlines[0]
+	c = line.split(':')[1]
+	if ('ELF64' in c):
+		return 'x86_64'
+	elif ('ELF32' in c):
+		return 'i686'
+	else:
+		raise Exception('Could not determine architecture')
+
+def get_cgroup_subdirs_for_pid(pid):
+	cgroup_info_file = '/proc/%s/cgroup'%pid
+	cgroup_lines = open(cgroup_info_file).read().splitlines()
+	
+	subdirs = {}
+	for line in cgroup_lines:
+		try:
+			_, cgroup_name, subdir = line.split(':')
+			subdirs[cgroup_name] = subdir
+		except Exception, e:
+			print "Error reading cgroup info: %s"%str(e)
+			pass
+	
+	return subdirs
+		
+	
+def umount(fs_dir, opts=''):
+	output = os.popen('/bin/umount %s %s 2>&1'%(opts, fs_dir)).read()
+	return ('device is busy' not in output)
+
+def kvmsu(slice_name, args):
+	# Find MAC address of virt interface
+	ifstr = os.popen('/usr/bin/virsh domiflist %s'%slice_name).read().strip()
+	mac_address = ifstr.split()[-1]
+
+	# Find IP address of virt interface
+	ipaddr_str = os.popen('arp -an | grep %s'%'78:2b:cb:2d:f0:60').read().strip()
+	ip_addr_part = ipaddr_str.split()[1]
+	if (ip_addr_part[0]=='(' and ip_addr_part[-1]==')'):
+		ip_addr = ip_addr_part[1:len(ip_addr_part)-1]
+	
+	os.execv('/usr/bin/ssh',['/usr/bin/ssh','-o','StrictHostKeyChecking=no','root@%s'%ip_addr,'"$@"'])
+	
+
+def lxcsu(slice_name, args):
+	# plain lxcsu
+	if not args.internal:
+		# no command given: enter interactive shell
+		if not args.command_to_run: args.command_to_run=['/bin/sh']
+		args.command_to_run = [ '-c' ] + [" ".join(args.command_to_run)]
+
+	# support for either setting debug at the top of this file, or on the command-line
+	if args.debug:
+		global debug
+		debug=True
+
+	try:
+		cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
+		# convert to int as a minimal raincheck
+		driver_pid = int(os.popen(cmd).read().strip())
+		# locate the pid for the - expected - single child, that would be the init for that VM
+		#init_pid = int(open("/proc/%s/task/%s/children"%(driver_pid,driver_pid)).read().strip())
+		init_pid = int(os.popen('pgrep -P %s'%driver_pid).readlines()[0].strip())
+		# Thierry: I am changing the code below to use child_pid instead of driver_pid
+		# for the namespace handling features, that I was able to check
+		# I've left the other ones as they were, i.e. using driver_pid, but I suspect
+		# they chould be changed as well
+
+	except:
+		print "Domain %s not found"%slice_name
+		exit(1)
+
+	if not driver_pid or not init_pid:
+		print "Domain %s not started"%slice_name
+		exit(1)
+
+	if debug: print "Found driver_pid",driver_pid,'and init_pid=',init_pid
+	# xxx probably init_pid here too
+	arch = getarch('/proc/%s/exe'%driver_pid)
+
+	# Set sysctls specific to slice
+	sysctls = []
+	sysctl_dir = '/etc/planetlab/vsys-attributes/%s'%slice_name
+	if (os.access(sysctl_dir,0)):
+		entries = os.listdir(sysctl_dir)
+		for e in entries:
+			prefix = 'vsys_sysctl.'
+			if (e.startswith(prefix)):
+				sysctl_file = '/'.join([sysctl_dir,e])
+				sysctl_name = e[len(prefix):]
+				sysctl_val = open(sysctl_file).read()
+				sysctls.append((sysctl_file, sysctl_name, sysctl_val))
+
+	# xxx probably init_pid here too
+	subdirs = get_cgroup_subdirs_for_pid(driver_pid) 
+	sysfs_root = '/sys/fs/cgroup'
+
+	# If the slice is frozen, then we'll get an EBUSY when trying to write to the task
+	# list for the freezer cgroup. Since the user couldn't do anything anyway, it's best
+	# in this case to error out the shell. (an alternative would be to un-freeze it,
+	# add the task, and re-freeze it)
+	# Enter cgroups
+	current_cgroup = ''
+	for subsystem in ['cpuset','memory','blkio','cpuacct','cpuacct,cpu','freezer']:
+		try:
+			current_cgroup = subsystem
+
+			# There seems to be a bug in the cgroup schema: cpuacct,cpu can become cpu,cpuacct
+			# We need to handle both
+			task_path_alt = None
+			try:
+			   subsystem_comps = subsystem.split(',')
+			   subsystem_comps.reverse()
+			   subsystem_alt = ','.join(subsystem_comps)
+			   tasks_path_alt = [sysfs_root, subsystem_alt, subdirs[subsystem], 'tasks']
+			except Exception,e:
+				pass
+			   
+			tasks_path = [sysfs_root,subsystem,subdirs[subsystem],'tasks']
+			tasks_path_str = '/'.join(tasks_path)
+	 
+			try:
+				f = open(tasks_path_str, 'w')
+			except:
+				tasks_path_alt_str = '/'.join(tasks_path_alt)
+				f = open(tasks_path_alt_str, 'w')
+
+			f.write(str(os.getpid()))
+			if (subsystem=='freezer'):
+				f.close()
+
+		except Exception,e:
+			if (not subdirs.has_key(subsystem)):
+				pass
+			else:
+				if debug: print e 
+				print "Error assigning cgroup %s (pid=%s) for slice %s"%(current_cgroup,driver_pid, slice_name)
+				exit(1)
+
+
+	def chcontext (path):
+		retcod = setns.chcontext (path)
+		if retcod != 0:
+			print 'WARNING - setns(%s)=>%s (ignored)'%(path,retcod)
+		return retcod
+
+	# Use init_pid and not driver_pid to locate reference namespaces
+	ref_ns = "/proc/%s/ns/"%init_pid
+
+	if True:					chcontext(ref_ns+'uts')
+	if True:					chcontext(ref_ns+'ipc')
+		
+	if (not args.no_pidns):		chcontext(ref_ns+'pid')
+	if (not args.no_netns):		chcontext(ref_ns+'net')
+	if (not args.no_mntns):		chcontext(ref_ns+'mnt')
+
+	proc_mounted = False
+	if (not os.access('/proc/self',0)):
+		proc_mounted = True
+		setns.proc_mount()
+
+	for (sysctl_file, sysctl_name, sysctl_val) in sysctls:
+		for fn in ["/sbin/sysctl", "/usr/sbin/sysctl", "/bin/sysctl", "/usr/bin/sysctl"]:
+			if os.path.exists(fn):
+				os.system('%s -w %s=%s	>/dev/null 2>&1'%(fn, sysctl_name,sysctl_val))
+				break
+			else:
+				print "Error: image does not have a sysctl binary"
+
+	# cgroups is not yet LXC-safe, so we need to use the coarse grained access control
+	# strategy of unmounting the filesystem
+
+	umount_result = True
+	for subsystem in ['cpuset','cpu,cpuacct','memory','devices','freezer','net_cls','blkio','perf_event','systemd']:
+		fs_path = '/sys/fs/cgroup/%s'%subsystem
+		if (not umount(fs_path,'-l')):
+			print 'WARNING - umount failed (ignored) with path=',fs_path
+			pass
+			# Leaving these comments for historical reference
+			#print "Error disabling cgroup access"
+			#exit(1) - Don't need this because failure here implies failure in the call to umount /sys/fs/cgroup
+
+	if (not umount('/sys/fs/cgroup')):
+		print "Error disabling cgroup access"
+		exit(1)
+
+	fork_pid = os.fork()
+
+	def getuid (slicename):
+		import pwd
+		try:
+			return pwd.getpwnam(slicename).pw_uid
+		except:
+			return
+
+	if (fork_pid == 0):
+		if (not args.root):
+			setns.drop_caps() 
+			if (args.nosliceuid):
+				# we still want to drop capabilities, but don't want to switch UIDs
+				exec_args = [arch,'/bin/sh','--login',]+args.command_to_run
+			else:
+								# let's keep this check even though we don't use the uid
+								# as a way of checking the existence of the slice account
+				uid = getuid (slice_name)
+				if not uid:
+					print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
+					exit(1)
+				exec_args = [arch,'/usr/bin/sudo','-u',slice_name,'/bin/sh','--login',]+args.command_to_run
+# once we can drop f12, it would be nicer to instead go for
+# exec_args = [arch,'/usr/sbin/capsh',cap_arg,'--user=%s'%slice_name,'--login',]+args.command_to_run
+		else:
+			exec_args = [arch,'/bin/sh','--login']+args.command_to_run
+
+		os.environ['SHELL'] = '/bin/sh'
+		if os.path.exists('/etc/planetlab/lib/bind_public.so'):
+			os.environ['LD_PRELOAD'] = '/etc/planetlab/lib/bind_public.so'
+		if not args.noslicehome:
+			os.environ['HOME'] = '/home/%s'%slice_name
+			os.chdir("/home/%s"%(slice_name))
+		if debug: print 'lxcsu:execv:','/usr/bin/setarch',exec_args
+		os.execv('/usr/bin/setarch',exec_args)
+	else:
+		setns.proc_umount()
+		_,status = os.waitpid(fork_pid,0)
+		exit(os.WEXITSTATUS(status))
+
+def main ():
+	parser = ArgumentParser()
+	parser.add_argument("-n", "--nonet",
+										action="store_true", dest="no_netns", default=False,
+										help="Don't enter network namespace")
+	parser.add_argument("-m", "--nomnt",
+										action="store_true", dest="no_mntns", default=False,
+										help="Don't enter mount namespace")
+	parser.add_argument("-p", "--nopid",
+										action="store_true", dest="no_pidns", default=False,
+										help="Don't enter pid namespace")
+	parser.add_argument("-r", "--root",
+										action="store_true", dest="root", default=False,
+										help="Enter as root: be careful")
+	parser.add_argument("-i","--internal",
+										action="store_true", dest="internal", default=False,
+										help="does *not* prepend '-- -c' to arguments - or invoke lxcsu-internal")
+	parser.add_argument("-d","--debug",
+										action='store_true', dest='debug', default=False,
+										help="debug option")
+	parser.add_argument("-s","--nosliceuid",
+										action='store_true', dest="nosliceuid", default=False,
+										help="do not change to slice uid inside of slice")
+	parser.add_argument("-o","--noslicehome",
+										action='store_true', dest="noslicehome", default=False,
+										help="do not change to slice home directory inside of slice")
+
+	if os.path.exists("/etc/lxcsu_default"):
+		defaults = parser.parse_args(file("/etc/lxcsu_default","r").read().split())
+		parser.set_defaults(**defaults.__dict__)
+
+	parser.add_argument ("slice_name")
+	parser.add_argument ("command_to_run",nargs="*")
+
+	args = parser.parse_args()
+	slice_name=args.slice_name
+
+	# unless we run the symlink 'lxcsu-internal', or we specify the -i option, prepend '--' '-c'
+	if sys.argv[0].find('internal')>=0: args.internal=True
+
+	if len(args.command_to_run)>0 and (args.command_to_run[0] == "/sbin/service"):
+		# A quick hack to support nodemanager interfaces.py when restarting
+		# networking in a slice.
+		args.nosliceuid = True
+
+	try:
+		cmd = '/usr/bin/virsh dominfo %s'%slice_name
+		info = os.popen(cmd).read()
+		d = {}
+
+		ostype = None
+		for line in info.split('\n'):
+			pair = line.split(':')
+			d[pair[0].strip()] = pair[1].strip()
+			if (pair[0].strip()=='OS Type'):
+				ostype = pair[1].strip()
+				break
+	except:
+		print "Domain %s not found"%slice_name
+
+	is_kvm = ostype=='hvm'
+
+	if (is_kvm):
+		kvmsu(slice_name, args)
+	else:
+		lxcsu(slice_name, args)
+
+if __name__ == '__main__':
+		main()
