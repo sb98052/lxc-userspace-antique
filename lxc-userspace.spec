@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 9
+%define taglevel 10
 
 %define percent %
 %define braop \{
@@ -55,6 +55,10 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Wed Mar 26 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-10
+- lxcsu evaluates slice_uid earlier
+- this is for old-installed f18 nodes like in PLE
+
 * Fri Mar 21 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-9
 - does not rely on capsh (actually this was the one in the sliver)
 - use native capability dropping instead
