@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 8
+%define taglevel 9
 
 %define percent %
 %define braop \{
@@ -55,6 +55,12 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Fri Mar 21 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-9
+- does not rely on capsh (actually this was the one in the sliver)
+- use native capability dropping instead
+- provides new slicesu binary
+- suitable for libvirt-1.1 and above
+
 * Fri Sep 20 2013 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-8
 - fix vsh permissions
 

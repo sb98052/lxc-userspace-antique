@@ -3,7 +3,7 @@
 import sys
 import os
 import setns
-import pdb
+import pwd
 
 from argparse import ArgumentParser
 
@@ -79,6 +79,24 @@ def main ():
     args = parser.parse_args()
     slice_name=args.slice_name
 
+    # support for either setting debug at the top of this file, or on the command-line
+    if args.debug:
+        global debug
+	debug=True
+
+    # somehow some older nodes won't be able to find the login name in /etc/passwd 
+    # when this is done down the road, so compute slice_uid while in a safe env
+    # even though we don't use the slice_uid any more, this is still 
+    # checked later on as a means to ensure existence of the slice account
+    try:
+        slice_uid = pwd.getpwnam(slice_name).pw_uid
+    except Exception, e:
+        if debug:
+            import traceback
+            print 'error while computing slice_uid',e
+            traceback.print_exc()
+        slice_uid=None
+
     # unless we run the symlink 'lxcsu-internal', or we specify the -i option, prepend '--' '-c'
     if sys.argv[0].find('internal')>=0: args.internal=True
 
@@ -92,11 +110,6 @@ def main ():
 	# no command given: enter interactive shell
 	if not args.command_to_run: args.command_to_run=['/bin/sh']
 	args.command_to_run = [ '-c' ] + [" ".join(args.command_to_run)]
-
-    # support for either setting debug at the top of this file, or on the command-line
-    if args.debug:
-        global debug
-	debug=True
 
     try:
         cmd = '/usr/bin/virsh --connect lxc:/// domid %s'%slice_name
@@ -230,13 +243,6 @@ def main ():
 
     fork_pid = os.fork()
 
-    def getuid (slicename):
-        import pwd
-        try:
-            return pwd.getpwnam(slicename).pw_uid
-        except:
-            return
-
     if (fork_pid == 0):
         if (not args.root):
             setns.drop_caps() 
@@ -244,10 +250,7 @@ def main ():
                 # we still want to drop capabilities, but don't want to switch UIDs
                 exec_args = [arch,'/bin/sh','--login',]+args.command_to_run
             else:
-				# let's keep this check even though we don't use the uid
-				# as a way of checking the existence of the slice account
-                uid = getuid (slice_name)
-                if not uid:
+                if not slice_uid:
                     print "lxcsu could not spot %s in /etc/passwd - exiting"%slice_name
                     exit(1)
                 exec_args = [arch,'/usr/bin/sudo','-u',slice_name,'/bin/sh','--login',]+args.command_to_run
