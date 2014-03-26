@@ -53,7 +53,7 @@ def kvmsu(slice_name, args):
 	if (ip_addr_part[0]=='(' and ip_addr_part[-1]==')'):
 		ip_addr = ip_addr_part[1:len(ip_addr_part)-1]
 	
-	os.execv('/usr/bin/ssh',['/usr/bin/ssh','-o','StrictHostKeyChecking=no','root@%s'%ip_addr,'"$@"'])
+	os.execv('/usr/bin/ssh',['/usr/bin/ssh','-o','StrictHostKeyChecking=no','root@%s'%ip_addr] + args.command_to_run)
 	
 
 def lxcsu(slice_name, args):
