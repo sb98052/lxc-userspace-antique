@@ -4,6 +4,7 @@ import sys
 import os
 import setns
 import pdb
+import re
 
 from argparse import ArgumentParser
 
@@ -43,17 +44,41 @@ def umount(fs_dir, opts=''):
 	return ('device is busy' not in output)
 
 def kvmsu(slice_name, args):
-	# Find MAC address of virt interface
-	ifstr = os.popen('/usr/bin/virsh domiflist %s'%slice_name).read().strip()
-	mac_address = ifstr.split()[-1]
+    mac_addresses = []
+    
+    # Find MAC addresses of virt interfaces
+    p = os.popen("virsh domiflist %s"%slice_name)
+    for line in p:
+        m = re.search(r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})', line, re.I)
+        if m:
+            mac_addresses.append(m.group())
 
-	# Find IP address of virt interface
-	ipaddr_str = os.popen('arp -an | grep %s'%'78:2b:cb:2d:f0:60').read().strip()
-	ip_addr_part = ipaddr_str.split()[1]
-	if (ip_addr_part[0]=='(' and ip_addr_part[-1]==')'):
-		ip_addr = ip_addr_part[1:len(ip_addr_part)-1]
-	
-	os.execv('/usr/bin/ssh',['/usr/bin/ssh','-o','StrictHostKeyChecking=no','root@%s'%ip_addr] + args.command_to_run)
+    # Find IP address of a reachable virt interface
+    # Here we're taking the one attached to br-nat, but this is specific to OpenCloud
+    ip_addr = None
+    try:
+        f = open('/var/lib/dnsmasq/br-nat.hosts', 'r')
+        for line in f:
+            for mac in mac_addresses:
+                m = re.search("^%s,[0-9.]+$"%mac, line, re.I)
+                if m:
+                    ip_addr = m.group().split(',')[1]
+                    break
+        f.close()
+    except:
+        pass
+        
+    if ip_addr:
+        # Need to login to a Ubuntu Cloud image as 'ubuntu' user
+        # Not sure how to make this more general
+	    os.execv('/usr/bin/ssh',
+                    ['/usr/bin/ssh','-o','StrictHostKeyChecking=no','ubuntu@%s'%ip_addr] 
+                    + args.command_to_run)
+    else:
+        # What should happen here?
+        print "Cannot map instance to IP address"
+        exit(1)
+        
 	
 
 def lxcsu(slice_name, args):
