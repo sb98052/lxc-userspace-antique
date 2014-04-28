@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 10
+%define taglevel 11
 
 %define percent %
 %define braop \{
@@ -55,6 +55,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Mon Apr 28 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-11
+- reworked kvmsu
+
 * Wed Mar 26 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-10
 - lxcsu evaluates slice_uid earlier
 - this is for old-installed f18 nodes like in PLE
