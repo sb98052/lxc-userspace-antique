@@ -23,6 +23,8 @@ Group: System Environment/Kernel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 Source0: lxc-userspace-%{version}.tar.gz
 Requires: binutils
+# lxcsu uses pgrep to compute the container's init_pid
+Requires: procps-ng
 
 Obsoletes: lxctools
 
