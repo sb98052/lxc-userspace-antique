@@ -10,8 +10,9 @@ from argparse import ArgumentParser
 # can set to True here, but also use the -d option
 debug = False
 
-def getarch(f):
-    output = os.popen('readelf -h %s 2>&1'%f).readlines()
+def getarch(pid):
+    exe_filename='/proc/%s/exe'%pid
+    output = os.popen('readelf -h %s 2>&1'%exe_filename).readlines()
     classlines = [x for x in output if ('Class' in x.split(':')[0])]
     line = classlines[0]
     c = line.split(':')[1]
@@ -20,7 +21,7 @@ def getarch(f):
     elif ('ELF32' in c):
         return 'i686'
     else:
-        raise Exception('Could not determine architecture')
+        raise Exception('Could not determine architecture for pid %s'%pid)
 
 def get_cgroup_subdirs_for_pid(pid):
     cgroup_info_file = '/proc/%s/cgroup'%pid
@@ -118,10 +119,10 @@ def main ():
         # locate the pid for the - expected - single child, that would be the init for that VM
         #init_pid = int(open("/proc/%s/task/%s/children"%(driver_pid,driver_pid)).read().strip())
 	init_pid = int(os.popen('pgrep -P %s'%driver_pid).readlines()[0].strip())
-        # Thierry: I am changing the code below to use child_pid instead of driver_pid
+        # Thierry: I am changing the code below to use init_pid instead of driver_pid
         # for the namespace handling features, that I was able to check
         # I've left the other ones as they were, i.e. using driver_pid, but I suspect
-        # they chould be changed as well
+        # some should be changed as well
 
     except:
         print "Domain %s not found"%slice_name
@@ -132,8 +133,8 @@ def main ():
 	exit(1)
 
     if debug: print "Found driver_pid",driver_pid,'and init_pid=',init_pid
-    # xxx probably init_pid here too
-    arch = getarch('/proc/%s/exe'%driver_pid)
+    # driver_pid is always x86_64, we need to look at the VM's init process here
+    arch = getarch(init_pid)
 
     # Set sysctls specific to slice
     sysctls = []
