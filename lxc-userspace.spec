@@ -1,6 +1,6 @@
 %define name lxc-userspace
 %define version 1.0
-%define taglevel 11
+%define taglevel 12
 
 %define percent %
 %define braop \{
@@ -57,6 +57,9 @@ chmod u+s /usr/sbin/vsh
 %postun
 
 %changelog
+* Wed Jul 16 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-12
+- fix lxcsu to spot the right architecture for the container - was always using the host's arch
+
 * Mon Apr 28 2014 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - lxc-userspace-1.0-11
 - reworked kvmsu
 
